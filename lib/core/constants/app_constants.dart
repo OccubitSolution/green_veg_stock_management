@@ -1,0 +1,37 @@
+/// App Constants
+///
+/// Central location for all app-wide constants
+class AppConstants {
+  AppConstants._();
+
+  // App Info
+  static const String appName = 'GreenVeg';
+  static const String appVersion = '1.0.0';
+
+  // Database - Neon PostgreSQL
+  static const String dbHost =
+      'ep-soft-poetry-a1s2z589-pooler.ap-southeast-1.aws.neon.tech';
+  static const int dbPort = 5432;
+  static const String dbName = 'neondb';
+  static const String dbUser = 'neondb_owner';
+  static const String dbPassword = 'npg_e41YusPpUajO';
+
+  // Storage Keys
+  static const String keyLanguage = 'language';
+  static const String keyTheme = 'theme';
+  static const String keyVendorId = 'vendor_id';
+  static const String keyIsLoggedIn = 'is_logged_in';
+  static const String keyPinEnabled = 'pin_enabled';
+
+  // Pagination
+  static const int defaultPageSize = 20;
+
+  // Date Formats
+  static const String dateFormat = 'dd-MM-yyyy';
+  static const String dateTimeFormat = 'dd-MM-yyyy HH:mm';
+
+  // Animation Durations
+  static const Duration shortAnimation = Duration(milliseconds: 200);
+  static const Duration mediumAnimation = Duration(milliseconds: 350);
+  static const Duration longAnimation = Duration(milliseconds: 500);
+}
