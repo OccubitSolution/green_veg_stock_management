@@ -31,7 +31,10 @@ class InventoryController extends GetxController {
     isLoading.value = true;
     try {
       final vendorId = _appController.vendorId.value;
-      if (vendorId.isEmpty) return;
+      if (vendorId.isEmpty) {
+        Get.snackbar('Error', 'Vendor ID not found');
+        return;
+      }
 
       // Load all stock
       final stock = await _repository.getStock(vendorId);
@@ -65,7 +68,10 @@ class InventoryController extends GetxController {
   ) async {
     try {
       final vendorId = _appController.vendorId.value;
-      if (vendorId.isEmpty) return;
+      if (vendorId.isEmpty) {
+        Get.snackbar('Error', 'Vendor ID not found');
+        return;
+      }
 
       await _repository.adjustStock(vendorId, productId, newQuantity, reason);
       await loadInventory();

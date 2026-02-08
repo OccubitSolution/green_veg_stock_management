@@ -1,5 +1,6 @@
 import 'package:green_veg_stock_management/app/data/models/customer_order_models.dart';
 import 'package:green_veg_stock_management/app/data/providers/database_provider.dart';
+import 'package:postgres/postgres.dart';
 
 /// Order Repository
 /// Handles all database operations for orders and order items
@@ -8,10 +9,8 @@ class OrderRepository {
 
   /// Get orders for a specific date
   Future<List<Order>> getOrdersByDate(String vendorId, DateTime date) async {
-    final conn = await _db.connection;
     final dateStr = date.toIso8601String().split('T')[0];
-
-    final result = await conn.execute(
+    final result = await _db.query(
       '''
       SELECT 
         o.*,
@@ -26,7 +25,7 @@ class OrderRepository {
       parameters: {'vendorId': vendorId, 'dateStr': dateStr},
     );
 
-    return result.map((row) => Order.fromJson(row.toColumnMap())).toList();
+    return result.map((row) => Order.fromJson(row)).toList();
   }
 
   /// Get orders by customer
@@ -34,9 +33,7 @@ class OrderRepository {
     String customerId, {
     int limit = 50,
   }) async {
-    final conn = await _db.connection;
-
-    final result = await conn.execute(
+    final result = await _db.query(
       '''
       SELECT 
         o.*,
@@ -51,14 +48,12 @@ class OrderRepository {
       parameters: {'customerId': customerId, 'limit': limit},
     );
 
-    return result.map((row) => Order.fromJson(row.toColumnMap())).toList();
+    return result.map((row) => Order.fromJson(row)).toList();
   }
 
   /// Get order by ID with items
   Future<Order?> getOrderById(String orderId) async {
-    final conn = await _db.connection;
-
-    final result = await conn.execute(
+    final result = await _db.query(
       '''
       SELECT 
         o.*,
@@ -72,14 +67,12 @@ class OrderRepository {
     );
 
     if (result.isEmpty) return null;
-    return Order.fromJson(result.first.toColumnMap());
+    return Order.fromJson(result.first);
   }
 
   /// Get order items for an order
   Future<List<OrderItem>> getOrderItems(String orderId) async {
-    final conn = await _db.connection;
-
-    final result = await conn.execute(
+    final result = await _db.query(
       '''
       SELECT 
         oi.*,
@@ -97,24 +90,22 @@ class OrderRepository {
       parameters: {'orderId': orderId},
     );
 
-    return result.map((row) => OrderItem.fromJson(row.toColumnMap())).toList();
+    return result.map((row) => OrderItem.fromJson(row)).toList();
   }
 
   /// Create new order with items
   Future<Order> createOrder(Order order, List<OrderItem> items) async {
-    final conn = await _db.connection;
-
-    return await conn.runTx((tx) async {
+    return await _db.transaction((tx) async {
       // Insert order
       final orderResult = await tx.execute(
-        '''
+        Sql.named('''
         INSERT INTO orders (
           customer_id, vendor_id, order_date, status, notes
         ) VALUES (
           @customerId, @vendorId, @orderDate, @status, @notes
         )
         RETURNING *
-      ''',
+      '''),
         parameters: {
           'customerId': order.customerId,
           'vendorId': order.vendorId,
@@ -129,13 +120,13 @@ class OrderRepository {
       // Insert order items
       for (final item in items) {
         await tx.execute(
-          '''
+          Sql.named('''
           INSERT INTO order_items (
             order_id, product_id, quantity, price_per_unit, notes
           ) VALUES (
             @orderId, @productId, @quantity, @pricePerUnit, @notes
           )
-        ''',
+        '''),
           parameters: {
             'orderId': newOrder.id,
             'productId': item.productId,
@@ -152,25 +143,23 @@ class OrderRepository {
 
   /// Update order status
   Future<void> updateOrderStatus(String orderId, OrderStatus status) async {
-    final conn = await _db.connection;
-
-    await conn.execute(
-      'UPDATE orders SET status = @status, updated_at = CURRENT_TIMESTAMP WHERE id = @orderId',
-      parameters: {'orderId': orderId, 'status': status.value},
+    await _db.update(
+      'orders',
+      {'status': status.value},
+      where: 'id = @orderId',
+      whereParams: {'orderId': orderId},
     );
   }
 
   /// Delete order and its items
   Future<void> deleteOrder(String orderId) async {
-    final conn = await _db.connection;
-
-    await conn.runTx((tx) async {
+    await _db.transaction((tx) async {
       await tx.execute(
-        'DELETE FROM order_items WHERE order_id = @orderId',
+        Sql.named('DELETE FROM order_items WHERE order_id = @orderId'),
         parameters: {'orderId': orderId},
       );
       await tx.execute(
-        'DELETE FROM orders WHERE id = @orderId',
+        Sql.named('DELETE FROM orders WHERE id = @orderId'),
         parameters: {'orderId': orderId},
       );
     });
@@ -182,10 +171,8 @@ class OrderRepository {
     String vendorId,
     DateTime date,
   ) async {
-    final conn = await _db.connection;
     final dateStr = date.toIso8601String().split('T')[0];
-
-    final result = await conn.execute(
+    final result = await _db.query(
       '''
       SELECT 
         p.id as product_id,
@@ -217,7 +204,7 @@ class OrderRepository {
     );
 
     return result.map((row) {
-      final json = row.toColumnMap();
+      final json = row;
       final details = (json['item_details'] as List<dynamic>)
           .map(
             (d) => OrderItemDetail(
@@ -247,10 +234,8 @@ class OrderRepository {
     String vendorId,
     DateTime date,
   ) async {
-    final conn = await _db.connection;
     final dateStr = date.toIso8601String().split('T')[0];
-
-    final result = await conn.execute(
+    final result = await _db.query(
       '''
       SELECT 
         COUNT(DISTINCT o.id) as total_orders,
@@ -265,7 +250,7 @@ class OrderRepository {
       parameters: {'vendorId': vendorId, 'dateStr': dateStr},
     );
 
-    final row = result.first.toColumnMap();
+    final row = result.first;
     return {
       'totalOrders': int.parse(row['total_orders']?.toString() ?? '0'),
       'totalCustomers': int.parse(row['total_customers']?.toString() ?? '0'),

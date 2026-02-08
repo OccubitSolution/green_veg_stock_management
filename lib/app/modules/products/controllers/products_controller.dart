@@ -34,7 +34,7 @@ class ProductsController extends GetxController {
     try {
       _productRepository = Get.find<ProductRepository>();
     } catch (e) {
-      print('Error initializing product repository: $e');
+      debugPrint('Error initializing product repository: $e');
     }
   }
 
@@ -49,27 +49,29 @@ class ProductsController extends GetxController {
 
     try {
       final vendorId = _storage.read('vendor_id');
-      print('🛒 Fetching products for vendor: $vendorId');
-      if (vendorId == null) {
-        print('❌ No vendor ID found in storage');
+      debugPrint('🛒 Fetching products for vendor: $vendorId');
+      if (vendorId == null || vendorId.toString().isEmpty) {
+        debugPrint('❌ No vendor ID found in storage');
+        Get.snackbar('Error', 'Vendor ID not found. Please login again.');
+        isLoading.value = false;
         return;
       }
 
       // Fetch categories
-      print('📦 Fetching categories...');
+      debugPrint('📦 Fetching categories...');
       final categoryList = await _productRepository.getCategories(vendorId);
-      print('✅ Categories fetched: ${categoryList.length}');
+      debugPrint('✅ Categories fetched: ${categoryList.length}');
       categories.value = categoryList;
 
       // Fetch products
-      print('🍎 Fetching products...');
+      debugPrint('🍎 Fetching products...');
       final productList = await _productRepository.getProducts(vendorId);
-      print('✅ Products fetched: ${productList.length}');
+      debugPrint('✅ Products fetched: ${productList.length}');
       products.value = productList;
       filteredProducts.value = productList;
     } catch (e, stackTrace) {
-      print('❌ Error fetching data: $e');
-      print('Stack trace: $stackTrace');
+      debugPrint('❌ Error fetching data: $e');
+      debugPrint('Stack trace: $stackTrace');
       Get.snackbar('error'.tr, 'something_went_wrong'.tr);
     } finally {
       isLoading.value = false;

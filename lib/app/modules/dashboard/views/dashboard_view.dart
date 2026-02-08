@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../../theme/app_theme.dart';
+import 'package:get/get.dart';
 import '../controllers/dashboard_controller.dart';
 import '../../home/views/home_view.dart';
 import '../../prices/views/daily_prices_view.dart';
 import '../../products/views/products_view.dart';
 import '../../reports/views/reports_view.dart';
+import '../../../widgets/navigation_widgets.dart';
+import '../../../theme/app_theme.dart';
+import '../../../routes/app_routes.dart';
 
 class DashboardView extends GetView<DashboardController> {
   const DashboardView({super.key});
@@ -14,77 +16,85 @@ class DashboardView extends GetView<DashboardController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundLight,
+      extendBody: true,
       body: Obx(
-        () => IndexedStack(
-          index: controller.currentIndex.value,
-          children: const [
-            HomeView(),
-            DailyPricesView(),
-            ProductsView(),
-            ReportsView(),
-          ],
+        () => AnimatedSwitcher(
+          duration: AppTheme.animNormal,
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0.02, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            );
+          },
+          child: _buildPage(controller.currentIndex.value),
         ),
       ),
       bottomNavigationBar: Obx(
         () =>
-            Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -5),
-                  ),
-                ],
-              ),
-              child: NavigationBar(
-                selectedIndex: controller.currentIndex.value,
-                onDestinationSelected: controller.changePage,
-                backgroundColor: AppTheme.surfaceLight,
-                surfaceTintColor: Colors.transparent,
-                indicatorColor: AppTheme.primaryColor.withOpacity(0.1),
-                destinations: [
-                  NavigationDestination(
-                    icon: const Icon(Icons.home_outlined),
-                    selectedIcon: const Icon(
-                      Icons.home,
-                      color: AppTheme.primaryColor,
-                    ),
-                    label: 'home'.tr,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.edit_calendar_outlined),
-                    selectedIcon: const Icon(
-                      Icons.edit_calendar,
-                      color: AppTheme.primaryColor,
-                    ),
-                    label: 'daily_prices'.tr,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.inventory_2_outlined),
-                    selectedIcon: const Icon(
-                      Icons.inventory_2,
-                      color: AppTheme.primaryColor,
-                    ),
-                    label: 'products'.tr,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.bar_chart_outlined),
-                    selectedIcon: const Icon(
-                      Icons.bar_chart,
-                      color: AppTheme.primaryColor,
-                    ),
-                    label: 'reports'.tr,
-                  ),
-                ],
-              ),
+            FloatingNavBarWithFab(
+              currentIndex: controller.currentIndex.value,
+              onTap: controller.changePage,
+              onFabPressed: () => Get.toNamed(AppRoutes.orders),
+              fabIcon: Icons.add_shopping_cart_rounded,
+              fabLabel: 'new_order'.tr,
+              items: const [
+                FloatingNavItem(
+                  icon: Icons.home_outlined,
+                  selectedIcon: Icons.home_rounded,
+                  label: 'home',
+                  activeColor: AppTheme.primaryColor,
+                ),
+                FloatingNavItem(
+                  icon: Icons.attach_money_rounded,
+                  selectedIcon: Icons.attach_money_rounded,
+                  label: 'prices',
+                  activeColor: AppTheme.accentColor,
+                ),
+                FloatingNavItem(
+                  icon: Icons.inventory_2_outlined,
+                  selectedIcon: Icons.inventory_2_rounded,
+                  label: 'products',
+                  activeColor: AppTheme.vegLeafy,
+                ),
+                FloatingNavItem(
+                  icon: Icons.bar_chart_outlined,
+                  selectedIcon: Icons.bar_chart_rounded,
+                  label: 'reports',
+                  activeColor: AppTheme.info,
+                ),
+              ],
             ).animate().slideY(
               begin: 1.0,
               end: 0.0,
               duration: 500.ms,
-              curve: Curves.easeOutQuart,
+              delay: 200.ms,
+              curve: Curves.easeOutCubic,
             ),
       ),
     );
+  }
+
+  Widget _buildPage(int index) {
+    switch (index) {
+      case 0:
+        return const HomeView(key: ValueKey('home'));
+      case 1:
+        return const DailyPricesView(key: ValueKey('prices'));
+      case 2:
+        return const ProductsView(key: ValueKey('products'));
+      case 3:
+        return const ReportsView(key: ValueKey('reports'));
+      default:
+        return const HomeView(key: ValueKey('home'));
+    }
   }
 }

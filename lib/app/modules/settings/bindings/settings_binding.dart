@@ -1,4 +1,5 @@
 /// Settings Binding
+library;
 import 'package:get/get.dart';
 import '../controllers/settings_controller.dart';
 

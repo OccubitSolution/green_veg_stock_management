@@ -1,6 +1,7 @@
 /// Initial Binding
 ///
 /// Global dependencies injected at app start
+library;
 import 'package:get/get.dart';
 import '../data/providers/database_provider.dart';
 import '../data/repositories/auth_repository.dart';

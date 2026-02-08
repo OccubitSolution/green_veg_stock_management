@@ -1,6 +1,7 @@
 /// App Translations
 ///
 /// Bilingual support for Gujarati and English
+library;
 import 'package:get/get.dart';
 
 class AppTranslations extends Translations {

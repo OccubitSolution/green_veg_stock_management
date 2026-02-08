@@ -1,4 +1,5 @@
 /// Product Model
+library;
 
 /// Helper to parse DateTime from PostgreSQL (returns DateTime or String)
 DateTime _parseDateTime(dynamic value) {
@@ -33,6 +34,7 @@ class Product {
   final String? unitName;
   final String? unitSymbol;
   final double? currentPrice;
+  final int? priceUpdates; // Count of price updates for this product
 
   Product({
     required this.id,
@@ -51,14 +53,15 @@ class Product {
     this.unitName,
     this.unitSymbol,
     this.currentPrice,
+    this.priceUpdates,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['id'] as String,
-      vendorId: json['vendor_id'] as String,
-      categoryId: json['category_id'] as String?,
-      unitId: json['unit_id'] as String?,
+      id: json['id'].toString(),
+      vendorId: json['vendor_id'].toString(),
+      categoryId: json['category_id']?.toString(),
+      unitId: json['unit_id']?.toString(),
       nameGu: json['name_gu'] as String,
       nameEn: json['name_en'] as String?,
       maxPrice: json['max_price'] != null
@@ -75,6 +78,7 @@ class Product {
       currentPrice: json['current_price'] != null
           ? double.tryParse(json['current_price'].toString())
           : null,
+      priceUpdates: json['price_updates'] as int?,
     );
   }
 
@@ -117,6 +121,7 @@ class Product {
     String? unitName,
     String? unitSymbol,
     double? currentPrice,
+    int? priceUpdates,
   }) {
     return Product(
       id: id ?? this.id,
@@ -135,6 +140,7 @@ class Product {
       unitName: unitName ?? this.unitName,
       unitSymbol: unitSymbol ?? this.unitSymbol,
       currentPrice: currentPrice ?? this.currentPrice,
+      priceUpdates: priceUpdates ?? this.priceUpdates,
     );
   }
 }

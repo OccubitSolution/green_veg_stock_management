@@ -34,8 +34,8 @@ class Customer {
 
   factory Customer.fromJson(Map<String, dynamic> json) {
     return Customer(
-      id: json['id'] as String,
-      vendorId: json['vendor_id'] as String,
+      id: json['id'].toString(),
+      vendorId: json['vendor_id'].toString(),
       name: json['name'] as String,
       contactPerson: json['contact_person'] as String?,
       phone: json['phone'] as String?,
@@ -94,10 +94,28 @@ class Customer {
 enum CustomerType {
   hotel('hotel', 'હોટલ', 'Hotel', Icons.hotel, Color(0xFF5C6BC0)),
   cafe('cafe', 'કેફે', 'Cafe', Icons.coffee, Color(0xFF8D6E63)),
-  restaurant('restaurant', 'રેસ્ટોરન્ટ', 'Restaurant', Icons.restaurant, Color(0xFFEF5350)),
-  supermarket('supermarket', 'સુપરમાર્કેટ', 'Supermarket', Icons.store, Color(0xFF42A5F5)),
+  restaurant(
+    'restaurant',
+    'રેસ્ટોરન્ટ',
+    'Restaurant',
+    Icons.restaurant,
+    Color(0xFFEF5350),
+  ),
+  supermarket(
+    'supermarket',
+    'સુપરમાર્કેટ',
+    'Supermarket',
+    Icons.store,
+    Color(0xFF42A5F5),
+  ),
   mess('mess', 'મેસ', 'Mess', Icons.food_bank, Color(0xFF66BB6A)),
-  catering('catering', 'કેટરિંગ', 'Catering', Icons.celebration, Color(0xFFAB47BC)),
+  catering(
+    'catering',
+    'કેટરિંગ',
+    'Catering',
+    Icons.celebration,
+    Color(0xFFAB47BC),
+  ),
   other('other', 'અન્ય', 'Other', Icons.business, Color(0xFF78909C));
 
   final String value;
@@ -106,7 +124,13 @@ enum CustomerType {
   final IconData icon;
   final Color color;
 
-  const CustomerType(this.value, this.nameGu, this.nameEn, this.icon, this.color);
+  const CustomerType(
+    this.value,
+    this.nameGu,
+    this.nameEn,
+    this.icon,
+    this.color,
+  );
 
   String getName(String lang) => lang == 'en' ? nameEn : nameGu;
 
@@ -151,9 +175,9 @@ class Order {
 
   factory Order.fromJson(Map<String, dynamic> json) {
     return Order(
-      id: json['id'] as String,
-      customerId: json['customer_id'] as String,
-      vendorId: json['vendor_id'] as String,
+      id: json['id'].toString(),
+      customerId: json['customer_id'].toString(),
+      vendorId: json['vendor_id'].toString(),
       orderDate: parseDateTime(json['order_date']),
       status: OrderStatus.fromString(json['status'] as String? ?? 'pending'),
       totalAmount: json['total_amount'] != null
@@ -164,7 +188,7 @@ class Order {
       updatedAt: parseDateTime(json['updated_at']),
       customerName: json['customer_name'] as String?,
       customerType: json['customer_type'] != null
-          ? CustomerType.fromString(json['customer_type'] as String)
+          ? CustomerType.fromString(json['customer_type'].toString())
           : null,
     );
   }
@@ -180,11 +204,7 @@ class Order {
     };
   }
 
-  Order copyWith({
-    OrderStatus? status,
-    double? totalAmount,
-    String? notes,
-  }) {
+  Order copyWith({OrderStatus? status, double? totalAmount, String? notes}) {
     return Order(
       id: id,
       customerId: customerId,
@@ -204,9 +224,27 @@ class Order {
 /// Order Status
 enum OrderStatus {
   pending('pending', 'બાકી', 'Pending', Icons.pending, Color(0xFFFF9800)),
-  confirmed('confirmed', 'પુષ્ટિ થઈ', 'Confirmed', Icons.check_circle, Color(0xFF4CAF50)),
-  delivered('delivered', 'ડિલિવર થયું', 'Delivered', Icons.delivery_dining, Color(0xFF2196F3)),
-  cancelled('cancelled', 'રદ કર્યું', 'Cancelled', Icons.cancel, Color(0xFFE53935));
+  confirmed(
+    'confirmed',
+    'પુષ્ટિ થઈ',
+    'Confirmed',
+    Icons.check_circle,
+    Color(0xFF4CAF50),
+  ),
+  delivered(
+    'delivered',
+    'ડિલિવર થયું',
+    'Delivered',
+    Icons.delivery_dining,
+    Color(0xFF2196F3),
+  ),
+  cancelled(
+    'cancelled',
+    'રદ કર્યું',
+    'Cancelled',
+    Icons.cancel,
+    Color(0xFFE53935),
+  );
 
   final String value;
   final String nameGu;
@@ -214,7 +252,13 @@ enum OrderStatus {
   final IconData icon;
   final Color color;
 
-  const OrderStatus(this.value, this.nameGu, this.nameEn, this.icon, this.color);
+  const OrderStatus(
+    this.value,
+    this.nameGu,
+    this.nameEn,
+    this.icon,
+    this.color,
+  );
 
   String getName(String lang) => lang == 'en' ? nameEn : nameGu;
 
@@ -261,9 +305,9 @@ class OrderItem {
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
-      id: json['id'] as String,
-      orderId: json['order_id'] as String,
-      productId: json['product_id'] as String,
+      id: json['id'].toString(),
+      orderId: json['order_id'].toString(),
+      productId: json['product_id'].toString(),
       quantity: double.parse(json['quantity'].toString()),
       pricePerUnit: json['price_per_unit'] != null
           ? double.parse(json['price_per_unit'].toString())

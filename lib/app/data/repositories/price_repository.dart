@@ -3,6 +3,8 @@
 /// Handles daily price operations
 library;
 
+import 'package:flutter/foundation.dart';
+
 import '../providers/database_provider.dart';
 import '../models/models.dart';
 
@@ -35,7 +37,7 @@ class PriceRepository {
 
       return result;
     } catch (e) {
-      print('❌ Get today prices failed: $e');
+      debugPrint('❌ Get today prices failed: $e');
       rethrow;
     }
   }
@@ -47,8 +49,10 @@ class PriceRepository {
   ) async {
     try {
       final dateStr = date.toIso8601String().split('T')[0];
-      print('🔍 [PriceRepo] Fetching prices for date: $dateStr, vendor: $vendorId');
-      
+      debugPrint(
+        '🔍 [PriceRepo] Fetching prices for date: $dateStr, vendor: $vendorId',
+      );
+
       final result = await _db.query(
         '''
         SELECT 
@@ -70,28 +74,68 @@ class PriceRepository {
         parameters: {'vendor_id': vendorId, 'price_date': dateStr},
       );
 
-      print('✅ [PriceRepo] Found ${result.length} products with prices');
-      
+      debugPrint('✅ [PriceRepo] Found ${result.length} products with prices');
+
       // Debug: Print first few results
       if (result.isNotEmpty) {
         for (var i = 0; i < result.length && i < 3; i++) {
-          print('📊 [PriceRepo] Product ${result[i]['product_id']}: Price = ${result[i]['price']}');
+          debugPrint(
+            '📊 [PriceRepo] Product ${result[i]['product_id']}: Price = ${result[i]['price']}',
+          );
         }
       }
 
       return result;
     } catch (e) {
-      print('❌ Get prices for date failed: $e');
+      debugPrint('❌ Get prices for date failed: $e');
       rethrow;
     }
   }
 
+  /// Get prices for a specific date as a Map of productId -> price
+  Future<Map<String, double>> getPricesForDateMap(
+    String vendorId,
+    DateTime date,
+  ) async {
+    try {
+      final dateStr = date.toIso8601String().split('T')[0];
+      final result = await _db.query(
+        '''
+        SELECT product_id, price
+        FROM daily_prices
+        WHERE price_date = @price_date::date
+        AND product_id IN (
+          SELECT id FROM products WHERE vendor_id = @vendor_id
+        )
+      ''',
+        parameters: {'vendor_id': vendorId, 'price_date': dateStr},
+      );
+
+      final Map<String, double> priceMap = {};
+      for (final row in result) {
+        final productId = row['product_id'] as String?;
+        final price = row['price'];
+        if (productId != null && price != null) {
+          priceMap[productId] = double.tryParse(price.toString()) ?? 0.0;
+        }
+      }
+      return priceMap;
+    } catch (e) {
+      debugPrint('❌ Get prices for date map failed: $e');
+      return {};
+    }
+  }
+
   /// Get yesterday's price for a product
-  Future<double?> getYesterdayPrice(String vendorId, String productId, DateTime date) async {
+  Future<double?> getYesterdayPrice(
+    String vendorId,
+    String productId,
+    DateTime date,
+  ) async {
     try {
       final yesterday = date.subtract(const Duration(days: 1));
       final dateStr = yesterday.toIso8601String().split('T')[0];
-      
+
       final result = await _db.query(
         '''
         SELECT dp.price
@@ -111,13 +155,13 @@ class PriceRepository {
 
       if (result.isNotEmpty && result.first['price'] != null) {
         final price = (result.first['price'] as num).toDouble();
-        print('📅 [PriceRepo] Yesterday price for $productId: ₹$price');
+        debugPrint('📅 [PriceRepo] Yesterday price for $productId: ₹$price');
         return price;
       }
-      
+
       return null;
     } catch (e) {
-      print('❌ Get yesterday price failed: $e');
+      debugPrint('❌ Get yesterday price failed: $e');
       return null;
     }
   }
@@ -154,7 +198,7 @@ class PriceRepository {
       }
       return null;
     } catch (e) {
-      print('❌ Set price failed: $e');
+      debugPrint('❌ Set price failed: $e');
       rethrow;
     }
   }
@@ -189,7 +233,7 @@ class PriceRepository {
 
       return true;
     } catch (e) {
-      print('❌ Bulk update prices failed: $e');
+      debugPrint('❌ Bulk update prices failed: $e');
       return false;
     }
   }
@@ -229,7 +273,7 @@ class PriceRepository {
 
       return result.map((json) => DailyPrice.fromJson(json)).toList();
     } catch (e) {
-      print('❌ Get price history failed: $e');
+      debugPrint('❌ Get price history failed: $e');
       return [];
     }
   }
@@ -266,7 +310,7 @@ class PriceRepository {
 
       return result.length;
     } catch (e) {
-      print('❌ Copy prices failed: $e');
+      debugPrint('❌ Copy prices failed: $e');
       return 0;
     }
   }
@@ -301,7 +345,7 @@ class PriceRepository {
 
       return result;
     } catch (e) {
-      print('❌ Get price trends failed: $e');
+      debugPrint('❌ Get price trends failed: $e');
       return [];
     }
   }

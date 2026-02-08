@@ -43,7 +43,10 @@ class PurchaseController extends GetxController {
     isLoading.value = true;
     try {
       final vendorId = _appController.vendorId.value;
-      if (vendorId.isEmpty) return;
+      if (vendorId.isEmpty) {
+        Get.snackbar('Error', 'Vendor ID not found');
+        return;
+      }
 
       final data = await _repository.getPurchases(
         vendorId,
@@ -66,7 +69,7 @@ class PurchaseController extends GetxController {
       final products = await _productRepository.getProducts(vendorId);
       availableProducts.value = products;
     } catch (e) {
-      print('Error loading products: $e');
+      debugPrint('Error loading products: $e');
     }
   }
 
@@ -158,7 +161,10 @@ class PurchaseController extends GetxController {
     isSaving.value = true;
     try {
       final vendorId = _appController.vendorId.value;
-      if (vendorId.isEmpty) return false;
+      if (vendorId.isEmpty) {
+        Get.snackbar('Error', 'Vendor ID not found');
+        return false;
+      }
 
       final purchase = Purchase(
         id: '',

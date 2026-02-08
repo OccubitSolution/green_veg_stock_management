@@ -1,6 +1,9 @@
 /// Database Provider
 ///
 /// Manages PostgreSQL connection to Neon database
+library;
+
+import 'package:flutter/foundation.dart';
 import 'package:postgres/postgres.dart';
 import '../../../core/constants/app_constants.dart';
 
@@ -40,9 +43,9 @@ class DatabaseProvider {
       );
 
       _isInitialized = true;
-      print('✅ Database connected successfully');
+      debugPrint('✅ Database connected successfully');
     } catch (e) {
-      print('❌ Database connection failed: $e');
+      debugPrint('❌ Database connection failed: $e');
       rethrow;
     }
   }
@@ -57,6 +60,9 @@ class DatabaseProvider {
     }
 
     try {
+      // debugPrint('🔍 Query: $sql');
+      // debugPrint('🔍 Params: $parameters');
+
       final result = await _connection!.execute(
         Sql.named(sql),
         parameters: parameters,
@@ -64,7 +70,7 @@ class DatabaseProvider {
 
       return result.map((row) => row.toColumnMap()).toList();
     } catch (e) {
-      print('❌ Query failed: $e');
+      debugPrint('❌ Query failed: $e');
       rethrow;
     }
   }
@@ -136,7 +142,16 @@ class DatabaseProvider {
   }) async {
     final sql = 'DELETE FROM $table WHERE $where';
     await query(sql, parameters: whereParams);
+    await query(sql, parameters: whereParams);
     return true;
+  }
+
+  /// Execute a transaction
+  Future<T> transaction<T>(Future<T> Function(TxSession session) action) async {
+    if (!isConnected) {
+      await initialize();
+    }
+    return await _connection!.runTx(action);
   }
 
   /// Close connection

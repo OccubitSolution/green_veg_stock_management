@@ -8,10 +8,9 @@ import 'package:green_veg_stock_management/app/modules/orders/controllers/order_
 import 'package:green_veg_stock_management/app/widgets/common_widgets.dart';
 
 class OrdersView extends GetView<OrderController> {
-  const OrdersView({Key? key}) : super(key: key);
+  const OrdersView({super.key});
 
   // Exact sizing specifications
-  static const double _headerHeight = 200.0;
   static const double _dateSelectorHeight = 56.0;
   static const double _cardBorderRadius = 16.0;
   static const double _iconSize = 24.0;
@@ -55,7 +54,6 @@ class OrdersView extends GetView<OrderController> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      height: _headerHeight,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -67,10 +65,13 @@ class OrdersView extends GetView<OrderController> {
           bottomRight: Radius.circular(_cardBorderRadius),
         ),
       ),
+      constraints: const BoxConstraints(maxHeight: 250),
       child: SafeArea(
+        bottom: false,
         child: Padding(
           padding: const EdgeInsets.all(_spacingMD),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Top Row
@@ -109,7 +110,7 @@ class OrdersView extends GetView<OrderController> {
                     icon: Container(
                       padding: const EdgeInsets.all(_spacingSM),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -122,7 +123,7 @@ class OrdersView extends GetView<OrderController> {
                 ],
               ),
 
-              const SizedBox(height: _spacingLG),
+              const SizedBox(height: _spacingMD),
 
               // Stats Row
               Obx(
@@ -137,7 +138,7 @@ class OrdersView extends GetView<OrderController> {
                     Container(
                       width: 1,
                       height: 40,
-                      color: Colors.white.withOpacity(0.3),
+                      color: Colors.white.withValues(alpha: 0.3),
                     ),
                     _buildStatItem(
                       Icons.people,
@@ -147,16 +148,19 @@ class OrdersView extends GetView<OrderController> {
                     Container(
                       width: 1,
                       height: 40,
-                      color: Colors.white.withOpacity(0.3),
+                      color: Colors.white.withValues(alpha: 0.3),
                     ),
                     _buildStatItem(
                       Icons.inventory,
-                      controller.orderStats['totalItems'].toStringAsFixed(1),
+                      (controller.orderStats['totalItems'] ?? 0)
+                          .toStringAsFixed(1),
                       'items'.tr,
                     ),
                   ],
                 ),
               ),
+
+              const SizedBox(height: _spacingSM),
             ],
           ),
         ),
@@ -167,7 +171,7 @@ class OrdersView extends GetView<OrderController> {
   Widget _buildStatItem(IconData icon, String value, String label) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white.withOpacity(0.9), size: _iconSize),
+        Icon(icon, color: Colors.white.withValues(alpha: 0.9), size: _iconSize),
         const SizedBox(height: _spacingXS),
         Text(
           value,
@@ -179,7 +183,10 @@ class OrdersView extends GetView<OrderController> {
         ),
         Text(
           label,
-          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.7),
+            fontSize: 12,
+          ),
         ),
       ],
     );
@@ -198,7 +205,7 @@ class OrdersView extends GetView<OrderController> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -286,7 +293,7 @@ class OrdersView extends GetView<OrderController> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: _spacingMD),
           child: TextField(
-            onChanged: controller.filterProducts,
+            onChanged: controller.filterOrders,
             decoration: InputDecoration(
               hintText: 'search_customers'.tr,
               prefixIcon: const Icon(Icons.search, color: Color(0xFF00695C)),
@@ -328,11 +335,15 @@ class OrdersView extends GetView<OrderController> {
               return _buildEmptyOrdersState();
             }
 
+            if (controller.filteredTodayOrders.isEmpty) {
+              return Center(child: Text('no_orders_found'.tr));
+            }
+
             return ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: _spacingMD),
-              itemCount: controller.todayOrders.length,
+              itemCount: controller.filteredTodayOrders.length,
               itemBuilder: (context, index) {
-                final order = controller.todayOrders[index];
+                final order = controller.filteredTodayOrders[index];
                 return _buildOrderCard(order, index);
               },
             );
@@ -351,7 +362,7 @@ class OrdersView extends GetView<OrderController> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: const Color(0xFF00695C).withOpacity(0.08),
+              color: const Color(0xFF00695C).withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -405,7 +416,7 @@ class OrdersView extends GetView<OrderController> {
         borderRadius: BorderRadius.circular(_cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -429,7 +440,7 @@ class OrdersView extends GetView<OrderController> {
                   height: 52,
                   decoration: BoxDecoration(
                     color: (order.customerType?.color ?? Colors.grey)
-                        .withOpacity(0.15),
+                        .withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -462,7 +473,7 @@ class OrdersView extends GetView<OrderController> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: order.status.color.withOpacity(0.1),
+                              color: order.status.color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -508,9 +519,11 @@ class OrdersView extends GetView<OrderController> {
           margin: const EdgeInsets.symmetric(horizontal: _spacingMD),
           padding: const EdgeInsets.all(_spacingMD),
           decoration: BoxDecoration(
-            color: const Color(0xFF00695C).withOpacity(0.08),
+            color: const Color(0xFF00695C).withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF00695C).withOpacity(0.2)),
+            border: Border.all(
+              color: const Color(0xFF00695C).withValues(alpha: 0.2),
+            ),
           ),
           child: Row(
             children: [
@@ -521,7 +534,7 @@ class OrdersView extends GetView<OrderController> {
                   color:
                       (controller.selectedCustomer.value?.type.color ??
                               Colors.grey)
-                          .withOpacity(0.2),
+                          .withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -628,7 +641,7 @@ class OrdersView extends GetView<OrderController> {
         borderRadius: BorderRadius.circular(_cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -650,8 +663,8 @@ class OrdersView extends GetView<OrderController> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        const Color(0xFF00897B).withOpacity(0.15),
-                        const Color(0xFF00897B).withOpacity(0.05),
+                        const Color(0xFF00897B).withValues(alpha: 0.15),
+                        const Color(0xFF00897B).withValues(alpha: 0.05),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(10),
@@ -687,7 +700,7 @@ class OrdersView extends GetView<OrderController> {
                   icon: Container(
                     padding: const EdgeInsets.all(_spacingSM),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF00695C).withOpacity(0.1),
+                      color: const Color(0xFF00695C).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(
@@ -753,7 +766,7 @@ class OrdersView extends GetView<OrderController> {
         borderRadius: BorderRadius.circular(_cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -767,7 +780,7 @@ class OrdersView extends GetView<OrderController> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFF00897B).withOpacity(0.1),
+                color: const Color(0xFF00897B).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.eco, color: Color(0xFF00897B), size: 22),
@@ -842,7 +855,7 @@ class OrdersView extends GetView<OrderController> {
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: const Color(0xFF00695C).withOpacity(0.1),
+          color: const Color(0xFF00695C).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: const Color(0xFF00695C), size: 18),
@@ -857,7 +870,7 @@ class OrdersView extends GetView<OrderController> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),
@@ -910,9 +923,16 @@ class OrdersView extends GetView<OrderController> {
     );
   }
 
-  void _showCustomerPicker() {
+  Future<void> _showCustomerPicker() async {
     // Navigate to customers list for selection
-    Get.toNamed('/customers');
+    final result = await Get.toNamed(
+      '/customers',
+      arguments: {'isSelectionMode': true},
+    );
+
+    if (result != null && result is Customer) {
+      controller.selectCustomer(result);
+    }
   }
 
   void _showQuantityDialog(Product product) {

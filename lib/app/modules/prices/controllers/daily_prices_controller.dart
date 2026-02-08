@@ -8,10 +8,12 @@ import 'package:intl/intl.dart';
 import '../../../data/models/product_model.dart';
 import '../../../data/repositories/product_repository.dart';
 import '../../../data/repositories/price_repository.dart';
+import '../../../controllers/app_controller.dart';
 
 class DailyPricesController extends GetxController {
   final ProductRepository _productRepository = Get.find<ProductRepository>();
   final PriceRepository _priceRepository = Get.find<PriceRepository>();
+  final AppController _appController = Get.find<AppController>();
   final _storage = GetStorage();
 
   // Controllers
@@ -26,7 +28,8 @@ class DailyPricesController extends GetxController {
   final products = <Product>[].obs;
   final filteredProducts = <Product>[].obs;
   final prices = <String, double>{}.obs;
-  final yesterdayPrices = <String, double>{}.obs;  // NEW: Track yesterday's prices
+  final yesterdayPrices =
+      <String, double>{}.obs; // NEW: Track yesterday's prices
 
   @override
   void onInit() {
@@ -62,17 +65,17 @@ class DailyPricesController extends GetxController {
     isLoading.value = true;
 
     try {
-      final vendorId = _storage.read('vendor_id');
-      print('🛒 [DailyPrices] Fetching data for vendor: $vendorId');
-      if (vendorId == null) {
-        print('❌ [DailyPrices] No vendor ID found');
+      final vendorId = _appController.vendorId.value;
+      debugPrint('🛒 [DailyPrices] Fetching data for vendor: $vendorId');
+      if (vendorId.isEmpty) {
+        debugPrint('❌ [DailyPrices] No vendor ID found');
         return;
       }
 
       // Fetch products
-      print('📦 [DailyPrices] Fetching products...');
+      debugPrint('📦 [DailyPrices] Fetching products...');
       final productList = await _productRepository.getProducts(vendorId);
-      print('✅ [DailyPrices] Products fetched: ${productList.length}');
+      debugPrint('✅ [DailyPrices] Products fetched: ${productList.length}');
       products.value = productList;
       filteredProducts.value = productList;
 
@@ -92,13 +95,15 @@ class DailyPricesController extends GetxController {
 
   Future<void> fetchPricesForDate() async {
     try {
-      final vendorId = _storage.read('vendor_id');
-      if (vendorId == null) {
-        print('❌ [DailyPrices] No vendor ID in storage');
+      final vendorId = _appController.vendorId.value;
+      if (vendorId.isEmpty) {
+        debugPrint('❌ [DailyPrices] No vendor ID in app controller');
         return;
       }
 
-      print('🔍 [DailyPrices] Fetching prices for date: ${selectedDate.value}');
+      debugPrint(
+        '🔍 [DailyPrices] Fetching prices for date: ${selectedDate.value}',
+      );
 
       // Clear existing price text controllers
       for (var controller in priceControllers.values) {
@@ -107,15 +112,21 @@ class DailyPricesController extends GetxController {
       prices.clear();
       yesterdayPrices.clear();
 
-      // Fetch prices for selected date
-      final priceData = await _priceRepository.getPricesForDate(
-        vendorId,
-        selectedDate.value,
-      );
+      // Fetch prices for selected date and yesterday
+      final results = await Future.wait([
+        _priceRepository.getPricesForDate(vendorId, selectedDate.value),
+        _priceRepository.getPricesForDateMap(
+          vendorId,
+          selectedDate.value.subtract(const Duration(days: 1)),
+        ),
+      ]);
 
-      print('✅ [DailyPrices] Received ${priceData.length} price records');
+      final priceData = results[0] as List<Map<String, dynamic>>;
+      final yesterdayPricesMap = results[1] as Map<String, double>;
 
-      // Populate today's prices
+      debugPrint('✅ [DailyPrices] Received ${priceData.length} products');
+
+      // Populate today's and yesterday's prices
       for (var item in priceData) {
         final productId = item['product_id'] as String?;
         final priceValue = item['price'];
@@ -124,33 +135,28 @@ class DailyPricesController extends GetxController {
 
         // Handle today's price
         if (priceValue != null) {
-          final price = (priceValue as num).toDouble();
+          final price = double.tryParse(priceValue.toString()) ?? 0.0;
           prices[productId] = price;
 
           if (priceControllers.containsKey(productId)) {
             priceControllers[productId]!.text = price.toStringAsFixed(2);
-            print('💰 [DailyPrices] Set price for $productId: ₹$price');
           }
         }
 
-        // Fetch yesterday's price for this product
-        final yesterdayPrice = await _priceRepository.getYesterdayPrice(
-          vendorId,
-          productId,
-          selectedDate.value,
-        );
-
-        if (yesterdayPrice != null) {
-          yesterdayPrices[productId] = yesterdayPrice;
+        // Handle yesterday's price (from bulk map)
+        if (yesterdayPricesMap.containsKey(productId)) {
+          yesterdayPrices[productId] = yesterdayPricesMap[productId]!;
         }
       }
 
-      print('✅ [DailyPrices] Populated ${prices.length} prices and ${yesterdayPrices.length} yesterday prices');
+      debugPrint(
+        '✅ [DailyPrices] Populated ${prices.length} prices and ${yesterdayPrices.length} yesterday prices',
+      );
       prices.refresh();
       yesterdayPrices.refresh();
     } catch (e, stackTrace) {
-      print('❌ [DailyPrices] Error fetching prices: $e');
-      print('📍 Stack trace: $stackTrace');
+      debugPrint('❌ [DailyPrices] Error fetching prices: $e');
+      debugPrint('📍 Stack trace: $stackTrace');
     }
   }
 

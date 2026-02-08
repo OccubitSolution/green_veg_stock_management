@@ -141,7 +141,14 @@ class CustomerController extends GetxController {
     isLoading.value = true;
     try {
       final vendorId = _appController.vendorId.value;
-      if (vendorId.isEmpty) return false;
+      if (vendorId.isEmpty) {
+        Get.snackbar(
+          'error'.tr,
+          'user_session_expired'.tr,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return false;
+      }
 
       final customer = Customer(
         id: customerId ?? '',
@@ -189,7 +196,7 @@ class CustomerController extends GetxController {
     } catch (e) {
       Get.snackbar(
         'error'.tr,
-        'failed_to_save_customer'.tr,
+        '${'failed_to_save_customer'.tr}: $e',
         snackPosition: SnackPosition.BOTTOM,
       );
       return false;

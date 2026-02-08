@@ -1,4 +1,6 @@
 /// App Pages - GetX Routing
+library;
+
 import 'package:get/get.dart';
 import 'app_routes.dart';
 
@@ -30,21 +32,21 @@ import '../modules/dashboard/views/dashboard_view.dart';
 import '../modules/dashboard/bindings/dashboard_binding.dart';
 
 // Reports
-    import '../modules/reports/views/reports_view.dart';
-    import '../modules/reports/bindings/reports_binding.dart';
-    
-    // Products
-    import '../modules/products/views/products_view.dart';
-    import '../modules/products/bindings/products_binding.dart';
+import '../modules/reports/views/reports_view.dart';
+import '../modules/reports/bindings/reports_binding.dart';
 
-    // Customers
-    import '../modules/customers/views/customers_view.dart';
-    import '../modules/customers/bindings/customer_binding.dart';
+// Products
+import '../modules/products/views/products_view.dart';
+import '../modules/products/bindings/products_binding.dart';
 
-    // Orders
-    import '../modules/orders/views/orders_view.dart';
-    import '../modules/orders/views/purchase_list_view.dart';
-    import '../modules/orders/bindings/order_binding.dart';
+// Customers
+import '../modules/customers/views/customers_view.dart';
+import '../modules/customers/bindings/customer_binding.dart';
+
+// Orders
+import '../modules/orders/views/orders_view.dart';
+import '../modules/orders/views/purchase_list_view.dart';
+import '../modules/orders/bindings/order_binding.dart';
 
 class AppPages {
   static const initial = AppRoutes.splash;
@@ -97,7 +99,7 @@ class AppPages {
     // We can keep AppRoutes.home for internal navigation if needed,
     // but the main entry after login should be Dashboard.
 
-// Products
+    // Products
     GetPage(
       name: AppRoutes.products,
       page: () => const ProductsView(),
@@ -128,7 +130,7 @@ class AppPages {
       transition: Transition.rightToLeft,
     ),
 
-// Reports
+    // Reports
     GetPage(
       name: AppRoutes.reports,
       page: () => const ReportsView(),
@@ -144,9 +146,17 @@ class AppPages {
       transition: Transition.rightToLeft,
     ),
 
-    // Orders
+    // Orders (FAB navigation)
     GetPage(
-      name: AppRoutes.sales, // Using sales route for orders
+      name: AppRoutes.orders,
+      page: () => const OrdersView(),
+      binding: OrderBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    // Sales (kept for backward compatibility)
+    GetPage(
+      name: AppRoutes.sales,
       page: () => const OrdersView(),
       binding: OrderBinding(),
       transition: Transition.rightToLeft,
@@ -156,6 +166,23 @@ class AppPages {
     GetPage(
       name: '/purchase-list',
       page: () => const PurchaseListView(),
+      binding: OrderBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    // Purchases (quick action from home)
+    GetPage(
+      name: AppRoutes.purchases,
+      page: () => const PurchaseListView(),
+      binding: OrderBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    // Stock
+    GetPage(
+      name: AppRoutes.stock,
+      page: () => const ProductsView(),
+      binding: ProductsBinding(),
       transition: Transition.rightToLeft,
     ),
   ];

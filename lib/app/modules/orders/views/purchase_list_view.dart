@@ -11,7 +11,7 @@ import 'package:green_veg_stock_management/app/data/repositories/order_repositor
 /// Shows aggregated orders - the KEY feature for the vegetable broker
 /// Groups all orders by product and sums quantities
 class PurchaseListView extends StatefulWidget {
-  const PurchaseListView({Key? key}) : super(key: key);
+  const PurchaseListView({super.key});
 
   @override
   State<PurchaseListView> createState() => _PurchaseListViewState();
@@ -47,7 +47,16 @@ class _PurchaseListViewState extends State<PurchaseListView> {
 
     try {
       final vendorId = _appController.vendorId.value;
-      if (vendorId.isEmpty) return;
+      if (vendorId.isEmpty) {
+        setState(() => isLoading = false);
+        Get.snackbar(
+          'error'.tr,
+          'Vendor ID not found. Please log in again.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red[100],
+        );
+        return;
+      }
 
       final items = await _repository.getAggregatedOrders(
         vendorId,
@@ -65,10 +74,13 @@ class _PurchaseListViewState extends State<PurchaseListView> {
       });
     } catch (e) {
       setState(() => isLoading = false);
+      debugPrint('Purchase list error: $e');
       Get.snackbar(
         'error'.tr,
-        'failed_to_load_purchase_list'.tr,
+        'Failed to load: ${e.toString().length > 100 ? e.toString().substring(0, 100) : e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red[100],
+        duration: const Duration(seconds: 5),
       );
     }
   }
@@ -183,7 +195,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
                     icon: Container(
                       padding: const EdgeInsets.all(_spacingSM),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -202,7 +214,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
               Text(
                 'Aggregated quantities from all customer orders',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.85),
+                  color: Colors.white.withValues(alpha: 0.85),
                   fontSize: 14,
                 ),
               ),
@@ -226,7 +238,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -342,7 +354,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -431,7 +443,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: const Color(0xFF00695C).withOpacity(0.08),
+              color: const Color(0xFF00695C).withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -496,7 +508,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
         borderRadius: BorderRadius.circular(_cardBorderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -537,7 +549,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
               vertical: _spacingSM,
             ),
             decoration: BoxDecoration(
-              color: const Color(0xFF00897B).withOpacity(0.1),
+              color: const Color(0xFF00897B).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -561,40 +573,35 @@ class _PurchaseListViewState extends State<PurchaseListView> {
               ),
             ),
             const SizedBox(height: _spacingSM),
-            ...item.itemDetails
-                .map(
-                  (detail) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: _spacingXS),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.person_outline,
-                          size: 16,
-                          color: Colors.grey[500],
-                        ),
-                        const SizedBox(width: _spacingSM),
-                        Expanded(
-                          child: Text(
-                            detail.customerName,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[800],
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${detail.quantity.toStringAsFixed(1)} ${item.unitSymbol}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1A1A1A),
-                          ),
-                        ),
-                      ],
+            ...item.itemDetails.map(
+              (detail) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: _spacingXS),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.person_outline,
+                      size: 16,
+                      color: Colors.grey[500],
                     ),
-                  ),
-                )
-                .toList(),
+                    const SizedBox(width: _spacingSM),
+                    Expanded(
+                      child: Text(
+                        detail.customerName,
+                        style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+                      ),
+                    ),
+                    Text(
+                      '${detail.quantity.toStringAsFixed(1)} ${item.unitSymbol}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1A1A1A),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -608,7 +615,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),
@@ -645,7 +652,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
               flex: 2,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  final text = _generateShareText();
+                  _generateShareText();
                   // Use share plugin here
                   Get.snackbar(
                     'Share',

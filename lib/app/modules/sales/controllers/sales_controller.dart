@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:green_veg_stock_management/app/controllers/app_controller.dart';
@@ -36,7 +37,10 @@ class SalesController extends GetxController {
     isLoading.value = true;
     try {
       final vendorId = _appController.vendorId.value;
-      if (vendorId.isEmpty) return;
+      if (vendorId.isEmpty) {
+        Get.snackbar('Error', 'Vendor ID not found');
+        return;
+      }
 
       final data = await _repository.getSales(
         vendorId,
@@ -79,7 +83,7 @@ class SalesController extends GetxController {
           )
           .toList();
     } catch (e) {
-      print('Error loading pending orders: $e');
+      debugPrint('Error loading pending orders: $e');
     }
   }
 
@@ -87,7 +91,10 @@ class SalesController extends GetxController {
     isConverting.value = true;
     try {
       final vendorId = _appController.vendorId.value;
-      if (vendorId.isEmpty) return;
+      if (vendorId.isEmpty) {
+        Get.snackbar('Error', 'Vendor ID not found');
+        return;
+      }
 
       await _repository.createSaleFromOrder(orderId, vendorId, items);
 

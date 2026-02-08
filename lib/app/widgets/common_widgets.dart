@@ -1,25 +1,154 @@
-﻿/// Common Widgets - Reusable UI Components
-/// Provides gradient cards, stat cards, action tiles and timeline items
+﻿/// Premium Widgets - Modern UI Components
+///
+/// Glassmorphism effects, animated counters, premium cards,
+/// and other modern UI elements for a stunning user experience.
+library;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'dart:ui';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_theme.dart';
 
-/// Gradient Card - A container with gradient background
-class GradientCard extends StatelessWidget {
-  final Widget child;
-  final List<Color>? gradientColors;
-  final EdgeInsetsGeometry? padding;
-  final double borderRadius;
-  final List<BoxShadow>? boxShadow;
+// ============================================================================
+// GLASS CARD - Frosted Glass Effect
+// ============================================================================
 
-  const GradientCard({
+class GlassCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final double borderRadius;
+  final double blur;
+  final Color? backgroundColor;
+  final double backgroundOpacity;
+  final List<Color>? gradientColors;
+  final VoidCallback? onTap;
+
+  const GlassCard({
     super.key,
     required this.child,
-    this.gradientColors,
     this.padding,
-    this.borderRadius = AppTheme.radiusLG,
-    this.boxShadow,
+    this.margin,
+    this.borderRadius = 24,
+    this.blur = 20,
+    this.backgroundColor,
+    this.backgroundOpacity = 0.7,
+    this.gradientColors,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: margin,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+          child: GestureDetector(
+            onTap: onTap,
+            child: Container(
+              padding: padding ?? const EdgeInsets.all(AppTheme.spacingLG),
+              decoration: BoxDecoration(
+                gradient: gradientColors != null
+                    ? LinearGradient(
+                        colors: gradientColors!,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: gradientColors == null
+                    ? (backgroundColor ?? Colors.white).withValues(
+                        alpha: backgroundOpacity,
+                      )
+                    : null,
+                borderRadius: BorderRadius.circular(borderRadius),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  width: 1.5,
+                ),
+              ),
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// PREMIUM CARD - Elevated Card with Subtle Shadows
+// ============================================================================
+
+class PremiumCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final double borderRadius;
+  final Color? backgroundColor;
+  final Color? borderColor;
+  final VoidCallback? onTap;
+  final bool elevated;
+
+  const PremiumCard({
+    super.key,
+    required this.child,
+    this.padding,
+    this.margin,
+    this.borderRadius = 24,
+    this.backgroundColor,
+    this.borderColor,
+    this.onTap,
+    this.elevated = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: margin,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? Colors.white,
+        borderRadius: BorderRadius.circular(borderRadius),
+        boxShadow: elevated ? AppTheme.elevatedShadow : AppTheme.cardShadow,
+        border: Border.all(
+          color: borderColor ?? AppTheme.borderLight.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: Padding(
+            padding: padding ?? const EdgeInsets.all(AppTheme.spacingMD),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// GRADIENT HERO CARD - For Top Banner/Stats Cards
+// ============================================================================
+
+class GradientHeroCard extends StatelessWidget {
+  final Widget child;
+  final List<Color> gradientColors;
+  final EdgeInsetsGeometry? padding;
+  final double borderRadius;
+
+  const GradientHeroCard({
+    super.key,
+    required this.child,
+    this.gradientColors = const [Color(0xFF10B981), Color(0xFF059669)],
+    this.padding,
+    this.borderRadius = 28,
   });
 
   @override
@@ -28,83 +157,400 @@ class GradientCard extends StatelessWidget {
       padding: padding ?? const EdgeInsets.all(AppTheme.spacingLG),
       decoration: BoxDecoration(
         gradient: LinearGradient(
+          colors: gradientColors,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors:
-              gradientColors ?? [AppTheme.primaryColor, AppTheme.primaryDark],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
-        boxShadow:
-            boxShadow ??
-            AppTheme.coloredShadow(
-              gradientColors?.first ?? AppTheme.primaryColor,
-            ),
+        boxShadow: AppTheme.coloredShadow(gradientColors.first),
       ),
       child: child,
     );
   }
 }
 
-/// Animated Stat Card - Card with icon and animated count
-class AnimatedStatCard extends StatelessWidget {
+// ============================================================================
+// PREMIUM STAT CARD - Animated Statistics Display
+// ============================================================================
+
+class PremiumStatCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
   final Color color;
-  final List<Color> gradient;
   final VoidCallback? onTap;
+  final String? subtitle;
+  final IconData? trendIcon;
+  final Color? trendColor;
 
-  const AnimatedStatCard({
+  const PremiumStatCard({
     super.key,
     required this.icon,
     required this.label,
     required this.value,
     required this.color,
-    required this.gradient,
     this.onTap,
+    this.subtitle,
+    this.trendIcon,
+    this.trendColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return PremiumCard(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                ),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const Spacer(),
+              if (trendIcon != null)
+                Icon(
+                  trendIcon,
+                  color: trendColor ?? AppTheme.success,
+                  size: 18,
+                ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spacingMD),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimaryLight,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondaryLight),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              subtitle!,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: trendColor ?? AppTheme.textTertiaryLight,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// FLOATING ACTION TILE - Quick Action Button with Float Effect
+// ============================================================================
+
+class FloatingActionTile extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const FloatingActionTile({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.color,
+    this.onTap,
+  });
+
+  @override
+  State<FloatingActionTile> createState() => _FloatingActionTileState();
+}
+
+class _FloatingActionTileState extends State<FloatingActionTile> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        widget.onTap?.call();
+        HapticFeedback.lightImpact();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedContainer(
+        duration: AppTheme.animFast,
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.diagonal3Values(
+          _isPressed ? 0.95 : 1.0,
+          _isPressed ? 0.95 : 1.0,
+          1.0,
+        ),
+        padding: const EdgeInsets.all(AppTheme.spacingSM),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(AppTheme.radiusLG),
-          boxShadow: AppTheme.cardShadow,
+          boxShadow: _isPressed ? AppTheme.cardShadow : AppTheme.softShadow,
+          border: Border.all(
+            color: widget.color.withValues(alpha: 0.1),
+            width: 1,
+          ),
         ),
-        child: Row(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: gradient),
+                gradient: LinearGradient(
+                  colors: [
+                    widget.color.withValues(alpha: 0.15),
+                    widget.color.withValues(alpha: 0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(AppTheme.radiusMD),
               ),
-              child: Icon(icon, color: Colors.white, size: 24),
+              child: Icon(widget.icon, color: widget.color, size: 26),
             ),
-            const SizedBox(width: AppTheme.spacingMD),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: AppTheme.spacingSM),
+            Text(
+              widget.label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimaryLight,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// MODERN SEARCH BAR
+// ============================================================================
+
+class ModernSearchBar extends StatelessWidget {
+  final TextEditingController? controller;
+  final String? hintText;
+  final ValueChanged<String>? onChanged;
+  final VoidCallback? onClear;
+  final bool showClearButton;
+
+  const ModernSearchBar({
+    super.key,
+    this.controller,
+    this.hintText,
+    this.onChanged,
+    this.onClear,
+    this.showClearButton = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+        boxShadow: AppTheme.cardShadow,
+        border: Border.all(color: AppTheme.borderLight.withValues(alpha: 0.5)),
+      ),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        style: Theme.of(context).textTheme.bodyLarge,
+        decoration: InputDecoration(
+          hintText: hintText ?? 'search'.tr,
+          hintStyle: TextStyle(color: AppTheme.textTertiaryLight),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: AppTheme.textSecondaryLight,
+          ),
+          suffixIcon: showClearButton && (controller?.text.isNotEmpty ?? false)
+              ? IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  color: AppTheme.textSecondaryLight,
+                  onPressed: () {
+                    controller?.clear();
+                    onClear?.call();
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.spacingMD,
+            vertical: AppTheme.spacingMD,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// SECTION HEADER - Modern Section Title
+// ============================================================================
+
+class SectionHeader extends StatelessWidget {
+  final String title;
+  final IconData? icon;
+  final VoidCallback? onViewAll;
+  final String? viewAllText;
+
+  const SectionHeader({
+    super.key,
+    required this.title,
+    this.icon,
+    this.onViewAll,
+    this.viewAllText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingSM),
+      child: Row(
+        children: [
+          if (icon != null) ...[
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+              ),
+              child: Icon(icon, size: 16, color: AppTheme.primaryColor),
+            ),
+            const SizedBox(width: AppTheme.spacingSM),
+          ],
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimaryLight,
+            ),
+          ),
+          const Spacer(),
+          if (onViewAll != null)
+            TextButton(
+              onPressed: onViewAll,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                    viewAllText ?? 'view_all'.tr,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppTheme.primaryColor,
                     ),
                   ),
-                  Text(
-                    label,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textSecondaryLight,
-                    ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 12,
+                    color: AppTheme.primaryColor,
                   ),
                 ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// MODERN FILTER CHIP - Animated Category Filter
+// ============================================================================
+
+class ModernFilterChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final Color? color;
+  final IconData? icon;
+  final VoidCallback onSelected;
+
+  const ModernFilterChip({
+    super.key,
+    required this.label,
+    required this.isSelected,
+    this.color,
+    this.icon,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final chipColor = color ?? AppTheme.primaryColor;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onSelected();
+      },
+      child: AnimatedContainer(
+        duration: AppTheme.animNormal,
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 16 : 14,
+          vertical: 10,
+        ),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [chipColor, chipColor.withValues(alpha: 0.85)],
+                )
+              : null,
+          color: isSelected ? null : Colors.white,
+          borderRadius: BorderRadius.circular(AppTheme.radiusRound),
+          border: Border.all(
+            color: isSelected ? chipColor : AppTheme.borderLight,
+            width: isSelected ? 0 : 1,
+          ),
+          boxShadow: isSelected ? AppTheme.coloredShadow(chipColor) : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected ? Colors.white : chipColor,
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : AppTheme.textPrimaryLight,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 13,
               ),
             ),
           ],
@@ -114,67 +560,10 @@ class AnimatedStatCard extends StatelessWidget {
   }
 }
 
-/// Quick Action Tile - Button for quick actions grid
-class QuickActionTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback? onTap;
+// ============================================================================
+// PRODUCT CARD - Modern Product List Item
+// ============================================================================
 
-  const QuickActionTile({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.color,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(AppTheme.radiusLG),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.radiusLG),
-        child: Container(
-          padding: const EdgeInsets.all(AppTheme.spacingSM),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-                  ),
-                  child: Icon(icon, color: color, size: 24),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Flexible(
-                child: Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.textPrimaryLight,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Modern Product Card - For product lists
 class ModernProductCard extends StatelessWidget {
   final String name;
   final String? subtitle;
@@ -197,90 +586,81 @@ class ModernProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return PremiumCard(
+      onTap: onTap,
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radiusLG),
-        boxShadow: AppTheme.softShadow,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppTheme.radiusLG),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          // Icon Container
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  iconColor.withValues(alpha: 0.15),
+                  iconColor.withValues(alpha: 0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+            ),
+            child: Icon(icon, color: iconColor, size: 26),
+          ),
+          const SizedBox(width: 14),
+          // Text Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon Container
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        iconColor.withValues(alpha: 0.15),
-                        iconColor.withValues(alpha: 0.05),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-                  ),
-                  child: Icon(icon, color: iconColor, size: 28),
+                Text(
+                  name,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(width: 16),
-                // Text Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      if (subtitle != null)
-                        Text(
-                          subtitle!,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppTheme.textSecondaryLight),
-                        ),
-                    ],
-                  ),
-                ),
-                // Trailing
-                if (trailing != null)
-                  trailing!
-                else if (price != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusSM),
-                    ),
-                    child: Text(
-                      price!,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.textSecondaryLight,
                     ),
                   ),
+                ],
               ],
             ),
           ),
-        ),
+          // Trailing
+          if (trailing != null)
+            trailing!
+          else if (price != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+              ),
+              child: Text(
+                price!,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: iconColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 }
 
-/// Price Input Card - For daily prices entry
+// ============================================================================
+// PRICE INPUT CARD - For Daily Prices Entry
+// ============================================================================
+
 class PriceInputCard extends StatelessWidget {
   final String name;
   final String? unit;
@@ -307,177 +687,130 @@ class PriceInputCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determine price change direction
-    IconData? changeIcon;
-    Color? changeColor;
+    // Determine price trend
+    IconData? trendIcon;
+    Color? trendColor;
     if (previousPrice != null && currentPrice != null) {
       if (currentPrice! > previousPrice!) {
-        changeIcon = Icons.arrow_upward;
-        changeColor = AppTheme.error;
+        trendIcon = Icons.trending_up_rounded;
+        trendColor = AppTheme.error;
       } else if (currentPrice! < previousPrice!) {
-        changeIcon = Icons.arrow_downward;
-        changeColor = AppTheme.success;
+        trendIcon = Icons.trending_down_rounded;
+        trendColor = AppTheme.success;
       }
     }
 
-    return Container(
+    return PremiumCard(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radiusLG),
-        boxShadow: AppTheme.softShadow,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Icon Container
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    iconColor.withValues(alpha: 0.15),
-                    iconColor.withValues(alpha: 0.05),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-              ),
-              child: Icon(icon, color: iconColor, size: 26),
-            ),
-            const SizedBox(width: 14),
-            // Product Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        unit ?? 'kg',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textSecondaryLight,
-                        ),
-                      ),
-                      if (changeIcon != null) ...[
-                        const SizedBox(width: 8),
-                        Icon(changeIcon, size: 14, color: changeColor),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // Price Input with Yesterday's Price
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  width: 110,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppTheme.backgroundLight,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-                    border: Border.all(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: TextField(
-                    controller: priceController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
-                    ),
-                    decoration: const InputDecoration(
-                      prefixText: 'â‚¹ ',
-                      prefixStyle: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryColor,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 12,
-                      ),
-                    ),
-                    onChanged: onPriceChanged,
-                  ),
-                ),
-                // Yesterday's Price Display
-                if (yesterdayPrice != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      '${'yesterday'.tr}: â‚¹${yesterdayPrice!.toStringAsFixed(2)}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondaryLight,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Section Header - For list sections
-class SectionHeader extends StatelessWidget {
-  final String title;
-  final IconData? icon;
-  final VoidCallback? onViewAll;
-
-  const SectionHeader({
-    super.key,
-    required this.title,
-    this.icon,
-    this.onViewAll,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMD),
+      padding: const EdgeInsets.all(14),
       child: Row(
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 20, color: AppTheme.textSecondaryLight),
-            const SizedBox(width: 8),
-          ],
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimaryLight,
+          // Icon
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  iconColor.withValues(alpha: 0.15),
+                  iconColor.withValues(alpha: 0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+            ),
+            child: Icon(icon, color: iconColor, size: 24),
+          ),
+          const SizedBox(width: 12),
+          // Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(
+                      unit ?? 'kg',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textSecondaryLight,
+                      ),
+                    ),
+                    if (trendIcon != null) ...[
+                      const SizedBox(width: 8),
+                      Icon(trendIcon, size: 14, color: trendColor),
+                    ],
+                  ],
+                ),
+              ],
             ),
           ),
-          const Spacer(),
-          if (onViewAll != null)
-            TextButton(onPressed: onViewAll, child: Text('view_all'.tr)),
+          // Price Input
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                width: 100,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTheme.backgroundLight,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                  border: Border.all(color: iconColor.withValues(alpha: 0.2)),
+                ),
+                child: TextField(
+                  controller: priceController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: iconColor,
+                  ),
+                  decoration: InputDecoration(
+                    prefixText: '₹ ',
+                    prefixStyle: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: iconColor,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 10,
+                    ),
+                  ),
+                  onChanged: onPriceChanged,
+                ),
+              ),
+              if (yesterdayPrice != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    '${'yesterday'.tr}: ₹${yesterdayPrice!.toStringAsFixed(0)}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppTheme.textTertiaryLight,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-/// Empty State Widget - For empty lists
+// ============================================================================
+// EMPTY STATE WIDGET
+// ============================================================================
+
 class EmptyStateWidget extends StatelessWidget {
   final IconData icon;
   final String message;
@@ -495,50 +828,50 @@ class EmptyStateWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: 64,
-              color: AppTheme.primaryColor.withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            message,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: AppTheme.textSecondaryLight),
-            textAlign: TextAlign.center,
-          ),
-          if (actionLabel != null && onAction != null) ...[
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: onAction,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spacingXL),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
               ),
-              icon: const Icon(Icons.add),
-              label: Text(actionLabel!),
+              child: Icon(
+                icon,
+                size: 56,
+                color: AppTheme.primaryColor.withValues(alpha: 0.5),
+              ),
             ),
+            const SizedBox(height: 24),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppTheme.textSecondaryLight,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: onAction,
+                icon: const Icon(Icons.add_rounded),
+                label: Text(actionLabel!),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 }
 
-/// Modern Date Selector - For date picking
+// ============================================================================
+// MODERN DATE SELECTOR
+// ============================================================================
+
 class ModernDateSelector extends StatelessWidget {
   final String dateText;
   final VoidCallback onPrevious;
@@ -556,36 +889,51 @@ class ModernDateSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         gradient: AppTheme.primaryGradient,
-        borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+        borderRadius: BorderRadius.circular(AppTheme.radiusRound),
         boxShadow: AppTheme.coloredShadow(AppTheme.primaryColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            icon: const Icon(Icons.chevron_left, color: Colors.white),
+            icon: const Icon(Icons.chevron_left_rounded, color: Colors.white),
             onPressed: onPrevious,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
           GestureDetector(
             onTap: onTap,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                dateText,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.calendar_today_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    dateText,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.chevron_right, color: Colors.white),
+            icon: const Icon(Icons.chevron_right_rounded, color: Colors.white),
             onPressed: onNext,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
         ],
       ),
@@ -593,62 +941,10 @@ class ModernDateSelector extends StatelessWidget {
   }
 }
 
-/// Modern Filter Chip - Styled category filter
-class ModernFilterChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final Color? color;
-  final VoidCallback onSelected;
+// ============================================================================
+// SKELETON LOADERS
+// ============================================================================
 
-  const ModernFilterChip({
-    super.key,
-    required this.label,
-    required this.isSelected,
-    this.color,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final chipColor = color ?? AppTheme.primaryColor;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: AnimatedContainer(
-        duration: AppTheme.animFast,
-        decoration: BoxDecoration(
-          color: isSelected ? chipColor : Colors.white,
-          borderRadius: BorderRadius.circular(AppTheme.radiusXL),
-          border: Border.all(
-            color: isSelected
-                ? chipColor
-                : AppTheme.textSecondaryLight.withValues(alpha: 0.3),
-          ),
-          boxShadow: isSelected ? AppTheme.coloredShadow(chipColor) : null,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onSelected,
-            borderRadius: BorderRadius.circular(AppTheme.radiusXL),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : AppTheme.textPrimaryLight,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Skeleton List Item - A pulsing loading placeholder
 class SkeletonItem extends StatelessWidget {
   final double height;
   final double width;
@@ -667,16 +963,15 @@ class SkeletonItem extends StatelessWidget {
           height: height,
           width: width,
           decoration: BoxDecoration(
-            color: Colors.grey[300],
+            color: AppTheme.borderLight,
             borderRadius: BorderRadius.circular(borderRadius),
           ),
         )
-        .animate(onPlay: (controller) => controller.repeat(reverse: true))
-        .fade(duration: 800.ms, begin: 0.5, end: 1.0);
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .fade(duration: 800.ms, begin: 0.4, end: 1.0);
   }
 }
 
-/// Skeleton List - A list of skeleton items for loading states
 class SkeletonList extends StatelessWidget {
   final int count;
   final double itemHeight;
@@ -703,30 +998,107 @@ class SkeletonList extends StatelessWidget {
           height: itemHeight,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(AppTheme.radiusLG),
-            boxShadow: AppTheme.softShadow,
+            borderRadius: BorderRadius.circular(AppTheme.radiusXL),
+            boxShadow: AppTheme.cardShadow,
           ),
           child: Row(
             children: [
-              const SkeletonItem(height: 48, width: 48, borderRadius: 12),
+              SkeletonItem(
+                height: 48,
+                width: 48,
+                borderRadius: AppTheme.radiusMD,
+              ),
               const SizedBox(width: 16),
-              Expanded(
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    SkeletonItem(height: 16, width: 120),
+                  children: [
+                    SkeletonItem(height: 14, width: 120),
                     SizedBox(height: 8),
-                    SkeletonItem(height: 12, width: 80),
+                    SkeletonItem(height: 10, width: 80),
                   ],
                 ),
               ),
               const SizedBox(width: 16),
-              const SkeletonItem(height: 30, width: 60, borderRadius: 8),
+              const SkeletonItem(
+                height: 28,
+                width: 60,
+                borderRadius: AppTheme.radiusSM,
+              ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+// ============================================================================
+// ANIMATED GRADIENT BUTTON
+// ============================================================================
+
+class GradientButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final List<Color> gradientColors;
+  final bool isLoading;
+
+  const GradientButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.icon,
+    this.gradientColors = const [Color(0xFF10B981), Color(0xFF059669)],
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: gradientColors),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+        boxShadow: AppTheme.coloredShadow(gradientColors.first),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isLoading ? null : onPressed,
+          borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+            child: isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (icon != null) ...[
+                        Icon(icon, color: Colors.white, size: 20),
+                        const SizedBox(width: 8),
+                      ],
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
     );
   }
 }

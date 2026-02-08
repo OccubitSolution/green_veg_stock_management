@@ -7,7 +7,7 @@ import 'package:green_veg_stock_management/app/theme/app_theme.dart';
 import 'package:green_veg_stock_management/app/widgets/common_widgets.dart';
 
 class CustomersView extends GetView<CustomerController> {
-  const CustomersView({Key? key}) : super(key: key);
+  const CustomersView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +46,7 @@ class CustomersView extends GetView<CustomerController> {
                           () => Text(
                             '${controller.customerCount} ${'customers_registered'.tr}',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
+                              color: Colors.white.withValues(alpha: 0.8),
                               fontSize: 14,
                             ),
                           ),
@@ -188,7 +188,7 @@ class CustomersView extends GetView<CustomerController> {
         onSelected: (_) => controller.setFilterType(type),
         label: Text(label),
         backgroundColor: Colors.white,
-        selectedColor: AppTheme.primaryColor.withOpacity(0.15),
+        selectedColor: AppTheme.primaryColor.withValues(alpha: 0.15),
         checkmarkColor: AppTheme.primaryColor,
         labelStyle: TextStyle(
           color: isSelected ? AppTheme.primaryColor : Colors.grey[700],
@@ -205,12 +205,21 @@ class CustomersView extends GetView<CustomerController> {
     return Card(
           margin: const EdgeInsets.only(bottom: 12),
           elevation: 2,
-          shadowColor: Colors.black.withOpacity(0.05),
+          shadowColor: Colors.black.withValues(alpha: 0.05),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           child: InkWell(
-            onTap: () => _showEditCustomerDialog(Get.context!, customer),
+            onTap: () {
+              final isSelectionMode =
+                  Get.arguments is Map &&
+                  Get.arguments['isSelectionMode'] == true;
+              if (isSelectionMode) {
+                Get.back(result: customer);
+              } else {
+                _showEditCustomerDialog(Get.context!, customer);
+              }
+            },
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -223,7 +232,7 @@ class CustomersView extends GetView<CustomerController> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          customer.type.color.withOpacity(0.8),
+                          customer.type.color.withValues(alpha: 0.8),
                           customer.type.color,
                         ],
                         begin: Alignment.topLeft,
@@ -232,7 +241,7 @@ class CustomersView extends GetView<CustomerController> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: customer.type.color.withOpacity(0.3),
+                          color: customer.type.color.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -396,7 +405,7 @@ class CustomersView extends GetView<CustomerController> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -423,7 +432,7 @@ class CustomersView extends GetView<CustomerController> {
                                 ? 'update_customer_info'.tr
                                 : 'enter_customer_details'.tr,
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
+                              color: Colors.white.withValues(alpha: 0.8),
                               fontSize: 14,
                             ),
                           ),

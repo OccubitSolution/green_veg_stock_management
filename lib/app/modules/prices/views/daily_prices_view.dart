@@ -1,7 +1,6 @@
-/// Daily Prices View - Redesigned with modern UI and Animations
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:get/get.dart';
 import '../controllers/daily_prices_controller.dart';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/common_widgets.dart';
@@ -9,171 +8,156 @@ import '../../../widgets/common_widgets.dart';
 class DailyPricesView extends GetView<DailyPricesController> {
   const DailyPricesView({super.key});
 
+  String get lang => Get.locale?.languageCode ?? 'gu';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Custom App Bar with Gradient
-            _buildAppBar(context),
-
-            // Date Selector
-            _buildDateSelector(context).animate().fadeIn(delay: 100.ms),
-
-            // Search Bar
-            _buildSearchBar(context).animate().fadeIn(delay: 200.ms),
-
-            // Products List with Prices
-            Expanded(child: _buildProductsList(context)),
-          ],
-        ),
-      ),
-      floatingActionButton: _buildSaveFAB(
-        context,
-      ).animate().scale(delay: 500.ms),
-    );
-  }
-
-  Widget _buildAppBar(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTheme.spacingMD,
-        vertical: AppTheme.spacingSM,
-      ),
-      decoration: BoxDecoration(gradient: AppTheme.primaryGradient),
-      child: Row(
+      body: Column(
         children: [
-          // Back Button
-          IconButton(
-            onPressed: () => Get.back(),
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          ),
-          // Title
+          // Header with Date Selector
+          _buildHeader(context),
+
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.spacingMD,
+              vertical: AppTheme.spacingSM,
+            ),
+            child: ModernSearchBar(
+              controller: controller.searchController,
+              hintText: 'search_products'.tr,
+              onChanged: controller.searchProducts,
+              onClear: controller.clearSearch,
+            ),
+          ).animate().fadeIn(delay: 200.ms),
+
+          // Products List
           Expanded(
-            child: Text(
-              'daily_prices'.tr,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          // Copy Previous Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.copy_all, color: Colors.white),
-              tooltip: 'copy_previous'.tr,
-              onPressed: controller.copyPreviousDayPrices,
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Language Toggle
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.translate, color: Colors.white),
-              onPressed: () {
-                final newLocale = Get.locale?.languageCode == 'gu'
-                    ? const Locale('en')
-                    : const Locale('gu');
-                Get.updateLocale(newLocale);
-              },
-            ),
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return const SkeletonList();
+              }
+
+              if (controller.filteredProducts.isEmpty) {
+                return EmptyStateWidget(
+                  icon: Icons.price_change_outlined,
+                  message: 'no_products'.tr,
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spacingMD,
+                  vertical: AppTheme.spacingSM,
+                ),
+                physics: const BouncingScrollPhysics(),
+                itemCount: controller.filteredProducts.length,
+                itemBuilder: (context, index) {
+                  final product = controller.filteredProducts[index];
+                  final price = controller.getPriceForProduct(product.id);
+
+                  return _buildPriceCard(context, product, price, index);
+                },
+              );
+            }),
           ),
         ],
       ),
-    ).animate().fadeIn().slideY(begin: -0.5, end: 0);
+      floatingActionButton: Obx(
+        () => controller.prices.isNotEmpty
+            ? GradientButton(
+                label: 'save_prices'.tr,
+                icon: Icons.save_rounded,
+                onPressed: controller.savePrices,
+                isLoading: controller.isLoading.value,
+              ).animate().fadeIn().slideY(begin: 0.5)
+            : const SizedBox.shrink(),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
   }
 
-  Widget _buildDateSelector(BuildContext context) {
+  Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppTheme.spacingMD),
-      child: Center(
-        child: Obx(
-          () => ModernDateSelector(
-            dateText: controller.formattedDate.value,
-            onPrevious: controller.previousDay,
-            onNext: controller.nextDay,
-            onTap: () => controller.selectDate(context),
-          ),
-        ),
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + AppTheme.spacingMD,
+        left: AppTheme.spacingMD,
+        right: AppTheme.spacingMD,
+        bottom: AppTheme.spacingMD,
       ),
-    );
-  }
-
-  Widget _buildSearchBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppTheme.radiusLG),
-          boxShadow: AppTheme.softShadow,
-        ),
-        child: TextField(
-          controller: controller.searchController,
-          onChanged: controller.searchProducts,
-          decoration: InputDecoration(
-            hintText: 'search_products'.tr,
-            hintStyle: const TextStyle(color: AppTheme.textSecondaryLight),
-            prefixIcon: const Icon(Icons.search, color: AppTheme.primaryColor),
-            suffixIcon: Obx(
-              () => controller.searchQuery.value.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(
-                        Icons.clear,
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceLight,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Title Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'daily_prices'.tr,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Obx(
+                    () => Text(
+                      controller.formattedDate.value,
+                      style: TextStyle(
                         color: AppTheme.textSecondaryLight,
+                        fontSize: 14,
                       ),
-                      onPressed: controller.clearSearch,
-                    )
-                  : const SizedBox.shrink(),
+                    ),
+                  ),
+                ],
+              ),
+              // Copy Prices Button
+              IconButton(
+                onPressed: controller.copyPreviousDayPrices,
+                icon: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                  ),
+                  child: const Icon(
+                    Icons.content_copy_rounded,
+                    color: AppTheme.primaryColor,
+                    size: 20,
+                  ),
+                ),
+                tooltip: 'copy_yesterday_prices'.tr,
+              ),
+            ],
+          ).animate().fadeIn().slideY(begin: -0.3),
+
+          const SizedBox(height: AppTheme.spacingMD),
+
+          // Date Navigation
+          Obx(
+            () => ModernDateSelector(
+              dateText: controller.formattedDate.value,
+              onPrevious: controller.previousDay,
+              onNext: controller.nextDay,
+              onTap: () => controller.selectDate(context),
             ),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spacingMD,
-              vertical: AppTheme.spacingMD,
-            ),
-          ),
-        ),
+          ).animate().fadeIn(delay: 100.ms),
+        ],
       ),
     );
-  }
-
-  Widget _buildProductsList(BuildContext context) {
-    return Obx(() {
-      if (controller.isLoading.value) {
-        return const SkeletonList();
-      }
-
-      if (controller.filteredProducts.isEmpty) {
-        return EmptyStateWidget(
-          icon: Icons.inventory_2_outlined,
-          message: 'no_products_found'.tr,
-        ).animate().fadeIn(duration: 300.ms);
-      }
-
-      return ListView.builder(
-        padding: const EdgeInsets.all(AppTheme.spacingMD),
-        itemCount: controller.filteredProducts.length,
-        itemBuilder: (context, index) {
-          final product = controller.filteredProducts[index];
-          final price = controller.getPriceForProduct(product.id);
-          return _buildPriceCard(context, product, price, index)
-              .animate()
-              .fadeIn(delay: (50 * index).ms)
-              .slideY(begin: 0.1, end: 0, delay: (50 * index).ms);
-        },
-      );
-    });
   }
 
   Widget _buildPriceCard(
@@ -182,60 +166,33 @@ class DailyPricesView extends GetView<DailyPricesController> {
     double? price,
     int index,
   ) {
-    final lang = Get.locale?.languageCode ?? 'gu';
-
-    // Get category color based on product category
-    Color iconColor = AppTheme.primaryColor;
-    if (product.categoryId != null) {
-      final categoryColors = {
-        'leafy_vegetables': AppTheme.vegLeafy,
-        'root_vegetables': AppTheme.vegRoot,
-        'gourds': AppTheme.vegGourd,
-        'exotic': AppTheme.vegExotic,
-        'fruits': AppTheme.vegFruit,
-      };
-      iconColor = categoryColors[product.categoryId] ?? AppTheme.primaryColor;
-    }
-
-    // Get yesterday's price for this product
+    final iconColor = _getCategoryColor(product.categoryId);
     final yesterdayPrice = controller.getYesterdayPrice(product.id);
+
+    // Calculate delay with a max cap
+    final delayMs = (index * 50).clamp(0, 500);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppTheme.spacingSM),
-      child: PriceInputCard(
-        name: product.getName(lang),
-        unit: product.unitSymbol ?? 'kg',
-        priceController: controller.priceControllers[product.id],
-        onPriceChanged: (value) => controller.updatePrice(product.id, value),
-        icon: Icons.eco,
-        iconColor: iconColor,
-        yesterdayPrice: yesterdayPrice, // NEW: Pass yesterday's price
-        currentPrice: price, // Current price for comparison
-      ),
+      child:
+          PriceInputCard(
+                name: product.getName(lang),
+                unit: product.unitSymbol ?? 'kg',
+                priceController: controller.priceControllers[product.id],
+                onPriceChanged: (value) =>
+                    controller.updatePrice(product.id, value),
+                icon: Icons.eco,
+                iconColor: iconColor,
+                yesterdayPrice: yesterdayPrice,
+                currentPrice: price,
+              )
+              .animate()
+              .fadeIn(delay: Duration(milliseconds: delayMs))
+              .slideX(begin: 0.1),
     );
   }
 
-  Widget _buildSaveFAB(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: AppTheme.primaryGradient,
-        borderRadius: BorderRadius.circular(AppTheme.radiusXL),
-        boxShadow: AppTheme.coloredShadow(AppTheme.primaryColor),
-      ),
-      child: FloatingActionButton.extended(
-        heroTag: 'daily_prices_fab',
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        onPressed: controller.savePrices,
-        icon: const Icon(Icons.save, color: Colors.white),
-        label: Text(
-          'save'.tr,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
+  Color _getCategoryColor(String? categoryId) {
+    return AppTheme.getCategoryColor(categoryId);
   }
 }

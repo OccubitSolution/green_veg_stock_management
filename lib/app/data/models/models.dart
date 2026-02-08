@@ -31,8 +31,8 @@ class DailyPrice {
 
   factory DailyPrice.fromJson(Map<String, dynamic> json) {
     return DailyPrice(
-      id: json['id'] as String,
-      productId: json['product_id'] as String,
+      id: json['id'].toString(),
+      productId: json['product_id'].toString(),
       priceDate: parseDateTime(json['price_date']),
       price: double.parse(json['price'].toString()),
       notes: json['notes'] as String?,
@@ -68,7 +68,7 @@ class ProductUnit {
 
   factory ProductUnit.fromJson(Map<String, dynamic> json) {
     return ProductUnit(
-      id: json['id'] as String,
+      id: json['id'].toString(),
       nameGu: json['name_gu'] as String,
       nameEn: json['name_en'] as String,
       symbol: json['symbol'] as String,
@@ -104,8 +104,8 @@ class Category {
 
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
-      id: json['id'] as String,
-      vendorId: json['vendor_id'] as String,
+      id: json['id'].toString(),
+      vendorId: json['vendor_id'].toString(),
       nameGu: json['name_gu'] as String,
       nameEn: json['name_en'] as String,
       color: json['color'] as String? ?? '#00897B',
@@ -154,7 +154,7 @@ class Vendor {
 
   factory Vendor.fromJson(Map<String, dynamic> json) {
     return Vendor(
-      id: json['id'] as String,
+      id: json['id'].toString(),
       email: json['email'] as String,
       name: json['name'] as String,
       phone: json['phone'] as String?,

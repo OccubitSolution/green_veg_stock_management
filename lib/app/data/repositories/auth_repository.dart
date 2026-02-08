@@ -1,8 +1,11 @@
 /// Auth Repository
 ///
 /// Handles vendor authentication operations
+library;
+
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import '../providers/database_provider.dart';
 import '../models/models.dart';
 
@@ -38,7 +41,7 @@ class AuthRepository {
       }
       return null;
     } catch (e) {
-      print('❌ Registration failed: $e');
+      debugPrint('❌ Registration failed: $e');
       rethrow;
     }
   }
@@ -66,7 +69,7 @@ class AuthRepository {
       }
       return null;
     } catch (e) {
-      print('❌ Login failed: $e');
+      debugPrint('❌ Login failed: $e');
       rethrow;
     }
   }
@@ -83,7 +86,7 @@ class AuthRepository {
 
       return result.isNotEmpty;
     } catch (e) {
-      print('❌ Email check failed: $e');
+      debugPrint('❌ Email check failed: $e');
       return false;
     }
   }
@@ -102,7 +105,7 @@ class AuthRepository {
 
       return true;
     } catch (e) {
-      print('❌ Set PIN failed: $e');
+      debugPrint('❌ Set PIN failed: $e');
       return false;
     }
   }
@@ -122,7 +125,7 @@ class AuthRepository {
 
       return result.isNotEmpty;
     } catch (e) {
-      print('❌ PIN verification failed: $e');
+      debugPrint('❌ PIN verification failed: $e');
       return false;
     }
   }
@@ -142,7 +145,7 @@ class AuthRepository {
       }
       return null;
     } catch (e) {
-      print('❌ Get vendor failed: $e');
+      debugPrint('❌ Get vendor failed: $e');
       return null;
     }
   }
@@ -164,7 +167,7 @@ class AuthRepository {
 
       return true;
     } catch (e) {
-      print('❌ Update settings failed: $e');
+      debugPrint('❌ Update settings failed: $e');
       return false;
     }
   }

@@ -1,4 +1,5 @@
 /// Prices Binding
+library;
 import 'package:get/get.dart';
 import '../controllers/daily_prices_controller.dart';
 

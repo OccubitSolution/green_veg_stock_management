@@ -1,173 +1,165 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:get/get.dart';
 import '../controllers/home_controller.dart';
-import '../../dashboard/controllers/dashboard_controller.dart';
 import '../../../theme/app_theme.dart';
-import '../../../routes/app_routes.dart';
 import '../../../widgets/common_widgets.dart';
+import '../../../routes/app_routes.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
+
+  String get lang => Get.locale?.languageCode ?? 'gu';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Custom Header & Welcome Section
-            _buildHeader(context),
+      body: RefreshIndicator(
+        onRefresh: controller.refreshData,
+        color: AppTheme.primaryColor,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          slivers: [
+            // Header Section
+            SliverToBoxAdapter(child: _buildHeader(context)),
 
-            // Scrollable Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppTheme.spacingMD,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Stats Grid
-                    _buildStatsGrid(context),
+            // Content
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacingMD,
+              ),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  // Hero Card
+                  _buildHeroCard(context),
 
-                    const SizedBox(height: AppTheme.spacingLG),
+                  const SizedBox(height: AppTheme.spacingLG),
 
-                    // Quick Actions
-                    SectionHeader(
-                      title: 'quick_actions'.tr,
-                      icon: Icons.flash_on_rounded,
-                    ).animate().fadeIn().slideX(begin: -0.2, end: 0),
-                    const SizedBox(height: AppTheme.spacingMD),
-                    _buildQuickActionsGrid(context),
+                  // Stats Grid
+                  _buildStatsSection(context),
 
-                    const SizedBox(height: AppTheme.spacingLG),
+                  const SizedBox(height: AppTheme.spacingLG),
 
-                    // Recent Activity
-                    SectionHeader(
-                      title: 'recent_activity'.tr,
-                      icon: Icons.history_rounded,
-                      onViewAll: () {
-                        // TODO: Navigate to history
-                      },
-                    ).animate().fadeIn().slideX(
-                      begin: -0.2,
-                      end: 0,
-                      delay: 200.ms,
-                    ),
-                    const SizedBox(height: AppTheme.spacingMD),
-                    _buildRecentActivityList(context),
+                  // Quick Actions
+                  _buildQuickActions(context),
 
-                    const SizedBox(height: 80), // Bottom padding for FAB/Nav
-                  ],
-                ),
+                  const SizedBox(height: AppTheme.spacingLG),
+
+                  // Recent Activity
+                  _buildRecentActivity(context),
+
+                  // Bottom padding for nav bar
+                  const SizedBox(height: 100),
+                ]),
               ),
             ),
           ],
         ),
       ),
-      // bottomNavigationBar: _buildBottomNav(context), // Removed: Dashboard handles nav
     );
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'good_morning'.tr;
+    } else if (hour < 17) {
+      return 'good_afternoon'.tr;
+    } else {
+      return 'good_evening'.tr;
+    }
   }
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppTheme.spacingMD),
-      child: Column(
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + AppTheme.spacingMD,
+        left: AppTheme.spacingMD,
+        right: AppTheme.spacingMD,
+        bottom: AppTheme.spacingMD,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Top Bar
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Greeting
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _getGreeting(),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSecondaryLight,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Obx(
-                    () => Text(
-                      controller.vendorName.value,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
+              Text(
+                _getGreeting(),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textSecondaryLight,
+                ),
               ),
-              // Settings & Profile
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Get.toNamed(AppRoutes.settings),
-                    icon: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-                      ),
-                      child: const Icon(
-                        Icons.settings_outlined,
-                        color: AppTheme.primaryColor,
-                        size: 22,
-                      ),
-                    ),
+              const SizedBox(height: 4),
+              Obx(
+                () => Text(
+                  controller.vendorName.value,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
+                ),
               ),
             ],
-          ).animate().fadeIn().slideY(begin: -0.5, end: 0),
-          const SizedBox(height: AppTheme.spacingLG),
-          // Main Welcome Card with Gradient
-          _buildWelcomeCard(context).animate().fadeIn().scale(delay: 200.ms),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+            ),
+            child: IconButton(
+              onPressed: () => Get.toNamed(AppRoutes.settings),
+              icon: const Icon(
+                Icons.settings_outlined,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+          ),
         ],
-      ),
+      ).animate().fadeIn().slideY(begin: -0.3),
     );
   }
 
-  Widget _buildWelcomeCard(BuildContext context) {
-    return GradientCard(
-      gradientColors: AppTheme.primaryGradient.colors,
+  Widget _buildHeroCard(BuildContext context) {
+    return GradientHeroCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              // Vegetable illustration placeholder
               Container(
-                width: 60,
-                height: 60,
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMD),
                 ),
-                child: const Icon(Icons.eco, color: Colors.white, size: 32),
+                child: const Icon(
+                  Icons.calendar_today_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
-              const SizedBox(width: AppTheme.spacingMD),
+              const SizedBox(width: AppTheme.spacingSM),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'app_name'.tr,
+                      'today_overview'.tr,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 4),
                     Obx(
                       () => Text(
                         controller.todayDate.value,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 13,
                         ),
                       ),
                     ),
@@ -177,226 +169,257 @@ class HomeView extends GetView<HomeController> {
             ],
           ),
           const SizedBox(height: AppTheme.spacingLG),
-          // Quick stat row
-          Container(
-            padding: const EdgeInsets.all(AppTheme.spacingMD),
-            decoration: AppTheme.glassDecoration(opacity: 0.2),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildMiniStat(
-                  Icons.inventory_2,
-                  'products'.tr,
-                  controller.productCount,
-                ),
-                Container(width: 1, height: 30, color: Colors.white24),
-                _buildMiniStat(
-                  Icons.attach_money,
-                  'prices_set'.tr,
-                  controller.pricesSetCount,
-                ),
-                Container(width: 1, height: 30, color: Colors.white24),
-                _buildMiniStat(
-                  Icons.shopping_cart,
-                  'sales'.tr,
-                  controller.todaySales,
-                ),
-              ],
-            ),
+          Row(
+            children: [
+              _buildHeroStat('products'.tr, controller.productCount),
+              const SizedBox(width: AppTheme.spacingMD),
+              _buildHeroStat('categories'.tr, controller.categoryCount),
+              const SizedBox(width: AppTheme.spacingMD),
+              _buildHeroStat('prices_set'.tr, controller.pricesSetCount),
+            ],
           ),
         ],
+      ),
+    ).animate().fadeIn(delay: 100.ms).scale(begin: const Offset(0.95, 0.95));
+  }
+
+  Widget _buildHeroStat(String label, RxString value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+        ),
+        child: Column(
+          children: [
+            Obx(
+              () => Text(
+                value.value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 20,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.8),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildMiniStat(IconData icon, String label, RxString value) {
+  Widget _buildStatsSection(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: Colors.white, size: 20),
-        const SizedBox(height: 4),
-        Obx(
-          () => Text(
-            value.value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+        SectionHeader(
+          title: 'quick_stats'.tr,
+          viewAllText: 'view_all'.tr,
+          onViewAll: () => Get.toNamed(AppRoutes.reports),
+        ),
+        const SizedBox(height: AppTheme.spacingSM),
+        Row(
+          children: [
+            Expanded(
+              child: Obx(
+                () => PremiumStatCard(
+                  icon: Icons.shopping_cart_outlined,
+                  label: 'today_purchases'.tr,
+                  value: controller.todayPurchases.value,
+                  color: AppTheme.warmAccent,
+                ),
+              ),
             ),
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.8),
-            fontSize: 10,
-          ),
-        ),
+            const SizedBox(width: AppTheme.spacingSM),
+            Expanded(
+              child: Obx(
+                () => PremiumStatCard(
+                  icon: Icons.attach_money_rounded,
+                  label: 'amount'.tr,
+                  value: controller.todayPurchaseAmount.value,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+            ),
+          ],
+        ).animate().fadeIn(delay: 200.ms).slideX(begin: 0.1),
+        const SizedBox(height: AppTheme.spacingSM),
+        Row(
+          children: [
+            Expanded(
+              child: Obx(
+                () => PremiumStatCard(
+                  icon: Icons.warning_amber_rounded,
+                  label: 'low_stock'.tr,
+                  value: controller.lowStockCount.value,
+                  color: AppTheme.warning,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppTheme.spacingSM),
+            Expanded(
+              child: Obx(
+                () => PremiumStatCard(
+                  icon: Icons.remove_shopping_cart_outlined,
+                  label: 'out_of_stock'.tr,
+                  value: controller.outOfStockCount.value,
+                  color: AppTheme.error,
+                ),
+              ),
+            ),
+          ],
+        ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.1),
       ],
     );
   }
 
-  Widget _buildStatsGrid(BuildContext context) {
+  Widget _buildQuickActions(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(title: 'quick_actions'.tr),
+        const SizedBox(height: AppTheme.spacingSM),
+        Row(
+          children: [
+            Expanded(
+              child: FloatingActionTile(
+                icon: Icons.price_change_rounded,
+                label: 'set_prices'.tr,
+                color: AppTheme.primaryColor,
+                onTap: () => Get.toNamed(AppRoutes.dailyPrices),
+              ),
+            ),
+            const SizedBox(width: AppTheme.spacingSM),
+            Expanded(
+              child: FloatingActionTile(
+                icon: Icons.add_shopping_cart_rounded,
+                label: 'new_purchase'.tr,
+                color: AppTheme.warmAccent,
+                onTap: () => Get.toNamed(AppRoutes.purchases),
+              ),
+            ),
+          ],
+        ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
+        const SizedBox(height: AppTheme.spacingSM),
+        Row(
+          children: [
+            Expanded(
+              child: FloatingActionTile(
+                icon: Icons.point_of_sale_rounded,
+                label: 'new_sale'.tr,
+                color: AppTheme.success,
+                onTap: () => Get.toNamed(AppRoutes.sales),
+              ),
+            ),
+            const SizedBox(width: AppTheme.spacingSM),
+            Expanded(
+              child: FloatingActionTile(
+                icon: Icons.inventory_2_outlined,
+                label: 'stock'.tr,
+                color: AppTheme.info,
+                onTap: () => Get.toNamed(AppRoutes.stock),
+              ),
+            ),
+          ],
+        ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.1),
+      ],
+    );
+  }
+
+  Widget _buildRecentActivity(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: 'recent_activity'.tr,
+          viewAllText: 'see_all'.tr,
+          onViewAll: () {
+            // TODO: Navigate to activity log
+          },
+        ),
+        const SizedBox(height: AppTheme.spacingSM),
+        PremiumCard(
+          padding: const EdgeInsets.all(AppTheme.spacingMD),
+          child: Column(
+            children: [
+              _buildActivityItem(
+                icon: Icons.price_change_rounded,
+                title: 'prices_updated'.tr,
+                subtitle: 'today'.tr,
+                color: AppTheme.primaryColor,
+              ),
+              const Divider(height: AppTheme.spacingLG),
+              _buildActivityItem(
+                icon: Icons.shopping_cart_outlined,
+                title: 'new_purchase'.tr,
+                subtitle: 'yesterday'.tr,
+                color: AppTheme.warmAccent,
+              ),
+              const Divider(height: AppTheme.spacingLG),
+              _buildActivityItem(
+                icon: Icons.person_add_outlined,
+                title: 'customer_added'.tr,
+                subtitle: '2_days_ago'.tr,
+                color: AppTheme.info,
+              ),
+            ],
+          ),
+        ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.1),
+      ],
+    );
+  }
+
+  Widget _buildActivityItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+  }) {
     return Row(
       children: [
-        Expanded(
-          child: Obx(
-            () => AnimatedStatCard(
-              label: 'total_products'.tr,
-              value: controller.productCount.value,
-              icon: Icons.inventory_2_outlined,
-              color: AppTheme.primaryColor,
-              gradient: [AppTheme.primaryLight, AppTheme.primaryColor],
-              onTap: () {
-                // Switch to Products tab
-                try {
-                  final dashboard = Get.find<DashboardController>();
-                  dashboard.changePage(2);
-                } catch (e) {
-                  Get.toNamed(AppRoutes.products);
-                }
-              },
-            ),
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMD),
           ),
+          child: Icon(icon, color: color, size: 20),
         ),
         const SizedBox(width: AppTheme.spacingMD),
         Expanded(
-          child: Obx(
-            () => AnimatedStatCard(
-              label: 'categories'.tr,
-              value: controller.categoryCount.value,
-              icon: Icons.category_outlined,
-              color: AppTheme.accentColor,
-              gradient: [AppTheme.accentLight, AppTheme.accentColor],
-              onTap: () {
-                // TODO: Navigate to categories
-              },
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: AppTheme.textSecondaryLight,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
         ),
+        const Icon(Icons.chevron_right, color: AppTheme.textTertiaryLight),
       ],
-    ).animate().fadeIn().slideX(begin: 0.2, end: 0, delay: 300.ms);
-  }
-
-  Widget _buildQuickActionsGrid(BuildContext context) {
-    final actions = [
-      {
-        'icon': Icons.edit_calendar,
-        'label': 'daily_prices'.tr,
-        'index': 1, // Dashboard Index
-        'color': Colors.blue,
-      },
-      {
-        'icon': Icons.inventory,
-        'label': 'products'.tr,
-        'index': 2, // Dashboard Index
-        'color': Colors.green,
-      },
-      {
-        'icon': Icons.shopping_bag,
-        'label': 'purchases'.tr,
-        'route': AppRoutes.purchases,
-        'color': Colors.orange,
-      },
-      {
-        'icon': Icons.point_of_sale,
-        'label': 'sales'.tr,
-        'route': AppRoutes.sales,
-        'color': Colors.purple,
-      },
-      {
-        'icon': Icons.people,
-        'label': 'customers'.tr,
-        'route': AppRoutes.customers,
-        'color': Colors.teal,
-      },
-      {
-        'icon': Icons.local_shipping,
-        'label': 'suppliers'.tr,
-        'route': AppRoutes.suppliers,
-        'color': Colors.indigo,
-      },
-      {
-        'icon': Icons.bar_chart,
-        'label': 'reports'.tr,
-        'index': 3, // Dashboard Index
-        'color': Colors.red,
-      },
-      {
-        'icon': Icons.analytics,
-        'label': 'analytics'.tr,
-        'route': AppRoutes.analytics,
-        'color': Colors.amber,
-      },
-    ];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        childAspectRatio: 0.85,
-        crossAxisSpacing: AppTheme.spacingMD,
-        mainAxisSpacing: AppTheme.spacingMD,
-      ),
-      itemCount: actions.length,
-      itemBuilder: (context, index) {
-        final action = actions[index];
-        return QuickActionTile(
-          icon: action['icon'] as IconData,
-          label: action['label'] as String,
-          color: action['color'] as Color,
-          onTap: () {
-            if (action.containsKey('index')) {
-              try {
-                final dashboard = Get.find<DashboardController>();
-                dashboard.changePage(action['index'] as int);
-              } catch (e) {
-                // Fallback if DashboardController not found
-                if (action['label'] == 'daily_prices'.tr)
-                  Get.toNamed(AppRoutes.dailyPrices);
-                if (action['label'] == 'products'.tr)
-                  Get.toNamed(AppRoutes.products);
-                if (action['label'] == 'reports'.tr)
-                  Get.toNamed(AppRoutes.reports);
-              }
-            } else if (action['route'] != null) {
-              Get.toNamed(action['route'] as String);
-            }
-          },
-        ).animate().fadeIn().slideY(
-          begin: 0.2,
-          end: 0,
-          delay: (400 + (index * 50)).ms,
-        );
-      },
     );
-  }
-
-  Widget _buildRecentActivityList(BuildContext context) {
-    // Placeholder for recent activity
-    return Center(
-      child: Column(
-        children: [
-          Icon(Icons.history, size: 48, color: Colors.grey[300]),
-          const SizedBox(height: 8),
-          Text(
-            'no_recent_activity'.tr,
-            style: TextStyle(color: Colors.grey[500]),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'activity_hint'.tr,
-            style: TextStyle(color: Colors.grey[400], fontSize: 12),
-          ),
-        ],
-      ),
-    ).animate().fadeIn(delay: 600.ms);
-  }
-
-  String _getGreeting() {
-    var hour = DateTime.now().hour;
-    if (hour < 12) return 'good_morning'.tr;
-    if (hour < 17) return 'good_afternoon'.tr;
-    return 'good_evening'.tr;
   }
 }

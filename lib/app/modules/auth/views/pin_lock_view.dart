@@ -1,4 +1,6 @@
 /// PIN Lock View
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -59,7 +61,7 @@ class PinLockView extends GetView<AuthController> {
                       shape: BoxShape.circle,
                       color: index < controller.pin.value.length
                           ? Colors.white
-                          : Colors.white.withOpacity(0.3),
+                          : Colors.white.withValues(alpha: 0.3),
                       border: Border.all(color: Colors.white, width: 2),
                     ),
                   );
@@ -159,7 +161,10 @@ class PinLockView extends GetView<AuthController> {
         height: 75,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.3),
+            width: 2,
+          ),
         ),
         child: Center(
           child: Text(
@@ -182,7 +187,7 @@ class PinLockView extends GetView<AuthController> {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(40),
-      child: Container(
+      child: SizedBox(
         width: 75,
         height: 75,
         child: Center(child: Icon(icon, size: 32, color: Colors.white)),

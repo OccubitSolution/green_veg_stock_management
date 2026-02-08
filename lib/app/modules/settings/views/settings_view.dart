@@ -1,4 +1,6 @@
 /// Settings View
+library;
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/settings_controller.dart';
@@ -78,7 +80,7 @@ class SettingsView extends GetView<SettingsController> {
           children: [
             CircleAvatar(
               radius: 30,
-              backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
               child: const Icon(
                 Icons.person,
                 size: 32,

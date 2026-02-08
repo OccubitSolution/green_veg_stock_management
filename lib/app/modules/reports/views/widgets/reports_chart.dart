@@ -49,7 +49,10 @@ class ReportsChart extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: ((maxY - minY) / 5).clamp(1.0, double.infinity),
           getDrawingHorizontalLine: (value) {
-            return FlLine(color: Colors.grey.withOpacity(0.1), strokeWidth: 1);
+            return FlLine(
+              color: Colors.grey.withValues(alpha: 0.1),
+              strokeWidth: 1,
+            );
           },
         ),
         titlesData: FlTitlesData(
@@ -118,8 +121,8 @@ class ReportsChart extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  AppTheme.primaryColor.withOpacity(0.2),
-                  AppTheme.primaryColor.withOpacity(0.0),
+                  AppTheme.primaryColor.withValues(alpha: 0.2),
+                  AppTheme.primaryColor.withValues(alpha: 0.0),
                 ],
               ),
             ),

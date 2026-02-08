@@ -1,4 +1,6 @@
 /// PIN Setup View
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -42,7 +44,7 @@ class PinSetupView extends GetView<AuthController> {
                         width: 70,
                         height: 70,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(18),
                         ),
                         child: const Icon(
@@ -76,7 +78,7 @@ class PinSetupView extends GetView<AuthController> {
                             : 'Set a 4-digit PIN for quick access',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
 
@@ -100,7 +102,7 @@ class PinSetupView extends GetView<AuthController> {
                                 shape: BoxShape.circle,
                                 color: index < currentPin.length
                                     ? Colors.white
-                                    : Colors.white.withOpacity(0.3),
+                                    : Colors.white.withValues(alpha: 0.3),
                                 border: Border.all(
                                   color: Colors.white,
                                   width: 2,
@@ -203,7 +205,10 @@ class PinSetupView extends GetView<AuthController> {
         height: 65,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.3),
+            width: 2,
+          ),
         ),
         child: Center(
           child: Text(

@@ -1,6 +1,9 @@
 /// Product Repository
 ///
 /// Handles product CRUD operations
+library;
+
+import 'package:flutter/foundation.dart' hide Category;
 import '../providers/database_provider.dart';
 import '../models/product_model.dart';
 import '../models/models.dart';
@@ -52,7 +55,7 @@ class ProductRepository {
 
       return result.map((json) => Product.fromJson(json)).toList();
     } catch (e) {
-      print('❌ Get products failed: $e');
+      debugPrint('❌ Get products failed: $e');
       rethrow;
     }
   }
@@ -83,7 +86,7 @@ class ProductRepository {
       }
       return null;
     } catch (e) {
-      print('❌ Get product failed: $e');
+      debugPrint('❌ Get product failed: $e');
       return null;
     }
   }
@@ -97,7 +100,7 @@ class ProductRepository {
       }
       return null;
     } catch (e) {
-      print('❌ Create product failed: $e');
+      debugPrint('❌ Create product failed: $e');
       rethrow;
     }
   }
@@ -120,7 +123,7 @@ class ProductRepository {
       }
       return null;
     } catch (e) {
-      print('❌ Update product failed: $e');
+      debugPrint('❌ Update product failed: $e');
       rethrow;
     }
   }
@@ -134,7 +137,7 @@ class ProductRepository {
         whereParams: {'id': productId},
       );
     } catch (e) {
-      print('❌ Delete product failed: $e');
+      debugPrint('❌ Delete product failed: $e');
       return false;
     }
   }
@@ -145,7 +148,7 @@ class ProductRepository {
       final result = await _db.query('SELECT * FROM units ORDER BY name_gu');
       return result.map((json) => ProductUnit.fromJson(json)).toList();
     } catch (e) {
-      print('❌ Get units failed: $e');
+      debugPrint('❌ Get units failed: $e');
       return [];
     }
   }
@@ -164,7 +167,7 @@ class ProductRepository {
 
       return result.map((json) => Category.fromJson(json)).toList();
     } catch (e) {
-      print('❌ Get categories failed: $e');
+      debugPrint('❌ Get categories failed: $e');
       return [];
     }
   }
@@ -178,7 +181,7 @@ class ProductRepository {
       }
       return null;
     } catch (e) {
-      print('❌ Create category failed: $e');
+      debugPrint('❌ Create category failed: $e');
       rethrow;
     }
   }

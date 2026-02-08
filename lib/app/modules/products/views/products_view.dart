@@ -1,296 +1,294 @@
-/// Products View - Redesigned with modern UI and Animations
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:get/get.dart';
 import '../controllers/products_controller.dart';
+import '../../../routes/app_routes.dart';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/common_widgets.dart';
-import 'add_product_view.dart';
 
 class ProductsView extends GetView<ProductsController> {
   const ProductsView({super.key});
+
+  String get lang => Get.locale?.languageCode ?? 'en';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       body: SafeArea(
+        bottom: false,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Custom App Bar with Gradient
-            _buildAppBar(context),
+            // Header
+            _buildHeader(context),
 
-            // Search Bar
-            _buildSearchBar(context).animate().fadeIn(delay: 200.ms),
+            // Category Filters
+            _buildCategoryFilters(context),
 
-            // Category Filter Chips
-            _buildCategoryFilter(context),
+            // Product List
+            Expanded(
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return const SkeletonList(count: 8);
+                }
 
-            const SizedBox(height: 8),
+                if (controller.filteredProducts.isEmpty) {
+                  return EmptyStateWidget(
+                    icon: Icons.eco_outlined,
+                    message: 'no_products_found'.tr,
+                    actionLabel: 'add_product'.tr,
+                    onAction: () => Get.toNamed(AppRoutes.addProduct),
+                  );
+                }
 
-            // Products Grid/List
-            Expanded(child: _buildProductsList(context)),
+                return _buildProductList(context);
+              }),
+            ),
           ],
         ),
       ),
-      floatingActionButton: _buildAddFAB(
-        context,
-      ).animate().scale(delay: 500.ms),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          gradient: AppTheme.primaryGradient,
+          borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+          boxShadow: AppTheme.coloredShadow(AppTheme.primaryColor),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => Get.toNamed(AppRoutes.addProduct),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add_rounded, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text(
+                    'Add',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ).animate().scale(delay: 300.ms, curve: Curves.elasticOut),
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTheme.spacingMD,
-        vertical: AppTheme.spacingSM,
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.spacingMD,
+        AppTheme.spacingMD,
+        AppTheme.spacingMD,
+        AppTheme.spacingSM,
       ),
-      decoration: BoxDecoration(gradient: AppTheme.primaryGradient),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Back Button
-          IconButton(
-            onPressed: () => Get.back(),
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          ),
-          // Title
-          Expanded(
-            child: Text(
-              'products'.tr,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          // Product Count Badge
-          Obx(
-            () => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(AppTheme.radiusXL),
-              ),
-              child: Text(
-                '${controller.filteredProducts.length}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+          // Title Row
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'products'.tr,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          // View Toggle
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.grid_view, color: Colors.white),
-              onPressed: () {
-                // TODO: Toggle grid/list view
-              },
-            ),
-          ),
+              // Stats Badge
+              Obx(
+                () => Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusRound),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.eco_rounded,
+                        size: 14,
+                        color: AppTheme.primaryColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${controller.products.length}',
+                        style: const TextStyle(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ).animate().fadeIn().slideX(begin: -0.1),
+          const SizedBox(height: AppTheme.spacingMD),
+
+          // Search Bar
+          ModernSearchBar(
+            controller: controller.searchController,
+            hintText: 'search_products'.tr,
+            onChanged: (value) => controller.searchProducts(value),
+            onClear: () => controller.searchProducts(''),
+          ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1),
         ],
       ),
-    ).animate().fadeIn().slideY(begin: -0.5, end: 0);
-  }
-
-  Widget _buildSearchBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppTheme.spacingMD),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppTheme.radiusLG),
-          boxShadow: AppTheme.softShadow,
-        ),
-        child: TextField(
-          controller: controller.searchController,
-          onChanged: controller.searchProducts,
-          decoration: InputDecoration(
-            hintText: 'search_products'.tr,
-            hintStyle: const TextStyle(color: AppTheme.textSecondaryLight),
-            prefixIcon: const Icon(Icons.search, color: AppTheme.primaryColor),
-            suffixIcon: Obx(
-              () => controller.searchQuery.value.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(
-                        Icons.clear,
-                        color: AppTheme.textSecondaryLight,
-                      ),
-                      onPressed: controller.clearSearch,
-                    )
-                  : const SizedBox.shrink(),
-            ),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spacingMD,
-              vertical: AppTheme.spacingMD,
-            ),
-          ),
-        ),
-      ),
     );
   }
 
-  Widget _buildCategoryFilter(BuildContext context) {
+  Widget _buildCategoryFilters(BuildContext context) {
     return SizedBox(
       height: 50,
-      child: Obx(() {
-        final categories = controller.categories;
-        return ListView.builder(
+      child: Obx(
+        () => ListView.builder(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          itemCount: categories.length + 1,
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
+          itemCount: controller.categories.length + 1, // +1 for "All"
           itemBuilder: (context, index) {
-            Widget chip;
             if (index == 0) {
-              chip = Obx(
-                () => ModernFilterChip(
+              // "All" filter
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ModernFilterChip(
                   label: 'all'.tr,
                   isSelected: controller.selectedCategory.value.isEmpty,
-                  color: AppTheme.primaryColor,
+                  icon: Icons.grid_view_rounded,
                   onSelected: () => controller.filterByCategory(''),
-                ),
-              );
-            } else {
-              final category = categories[index - 1];
-              final categoryColors = {
-                'leafy_vegetables': AppTheme.vegLeafy,
-                'root_vegetables': AppTheme.vegRoot,
-                'gourds': AppTheme.vegGourd,
-                'exotic': AppTheme.vegExotic,
-                'fruits': AppTheme.vegFruit,
-              };
-
-              chip = Obx(
-                () => ModernFilterChip(
-                  label: category.getName(Get.locale?.languageCode ?? 'gu'),
-                  isSelected: controller.selectedCategory.value == category.id,
-                  color: categoryColors[category.id] ?? AppTheme.accentColor,
-                  onSelected: () => controller.filterByCategory(category.id),
                 ),
               );
             }
 
-            return chip
-                .animate()
-                .fadeIn(delay: (300 + (index * 50)).ms)
-                .slideX(begin: 0.2, end: 0);
+            final category = controller.categories[index - 1];
+            final isSelected = controller.selectedCategory.value == category.id;
+            final color = AppTheme.getCategoryColor(category.id);
+
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ModernFilterChip(
+                label: category.getName(lang),
+                isSelected: isSelected,
+                color: color,
+                icon: _getCategoryIcon(category.id),
+                onSelected: () => controller.filterByCategory(category.id),
+              ),
+            );
           },
-        );
-      }),
+        ),
+      ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1),
     );
   }
 
-  Widget _buildProductsList(BuildContext context) {
-    return Obx(() {
-      if (controller.isLoading.value) {
-        return const SkeletonList();
-      }
-
-      if (controller.filteredProducts.isEmpty) {
-        return EmptyStateWidget(
-          icon: Icons.inventory_2_outlined,
-          message: 'no_products_found'.tr,
-          // TODO: Enable when Add Product page is implemented
-          // actionLabel: 'add_product'.tr,
-          // onAction: () => Get.toNamed(AppRoutes.addProduct),
-        ).animate().fadeIn(duration: 300.ms);
-      }
-
-      return ListView.builder(
-        padding: const EdgeInsets.all(AppTheme.spacingMD),
-        itemCount: controller.filteredProducts.length,
-        itemBuilder: (context, index) {
-          final product = controller.filteredProducts[index];
-          return _buildProductCard(context, product)
-              .animate()
-              .fadeIn(delay: (50 * index).ms)
-              .scale(begin: const Offset(0.9, 0.9), delay: (50 * index).ms);
-        },
-      );
-    });
+  IconData _getCategoryIcon(String? categoryId) {
+    const categoryIcons = {
+      'leafy_vegetables': Icons.eco,
+      'root_vegetables': Icons.spa,
+      'gourds': Icons.grass,
+      'exotic': Icons.local_florist,
+      'fruits': Icons.apple,
+    };
+    return categoryIcons[categoryId] ?? Icons.category;
   }
 
-  Widget _buildProductCard(BuildContext context, dynamic product) {
-    final lang = Get.locale?.languageCode ?? 'gu';
+  Widget _buildProductList(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.spacingMD,
+        AppTheme.spacingMD,
+        AppTheme.spacingMD,
+        120, // Space for FAB and bottom nav
+      ),
+      itemCount: controller.filteredProducts.length,
+      itemBuilder: (context, index) {
+        final product = controller.filteredProducts[index];
+        return _buildProductCard(context, product, index);
+      },
+    );
+  }
 
-    // Get category color based on product category
-    Color iconColor = AppTheme.primaryColor;
-    if (product.categoryId != null) {
-      final categoryColors = {
-        'leafy_vegetables': AppTheme.vegLeafy,
-        'root_vegetables': AppTheme.vegRoot,
-        'gourds': AppTheme.vegGourd,
-        'exotic': AppTheme.vegExotic,
-        'fruits': AppTheme.vegFruit,
-      };
-      iconColor = categoryColors[product.categoryId] ?? AppTheme.primaryColor;
-    }
+  Widget _buildProductCard(BuildContext context, dynamic product, int index) {
+    final iconColor = AppTheme.getCategoryColor(product.categoryId);
 
     return ModernProductCard(
-      name: product.getName(lang),
-      subtitle:
-          '${product.unitSymbol ?? 'kg'} • ${product.categoryId ?? 'vegetables'.tr}',
-      price: product.currentPrice != null ? '₹${product.currentPrice}' : null,
-      icon: Icons.eco,
-      iconColor: iconColor,
-      onTap: () {
-        // TODO: Navigate to product details
-      },
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (product.currentPrice != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppTheme.radiusSM),
-              ),
-              child: Text(
-                '₹${product.currentPrice}',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: iconColor,
-                  fontWeight: FontWeight.bold,
+          name: product.getName(lang),
+          subtitle:
+              '${product.unitSymbol ?? 'kg'} • ${product.categoryId ?? 'vegetables'.tr}',
+          price: product.currentPrice != null
+              ? '₹${product.currentPrice}'
+              : null,
+          icon: Icons.eco,
+          iconColor: iconColor,
+          onTap: () {
+            // TODO: Navigate to product details
+          },
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (product.currentPrice != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+                  ),
+                  child: Text(
+                    '₹${product.currentPrice}',
+                    style: TextStyle(
+                      color: iconColor,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warning.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+                  ),
+                  child: Text(
+                    'no_price'.tr,
+                    style: const TextStyle(
+                      color: AppTheme.warning,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppTheme.textTertiaryLight,
+                size: 20,
               ),
-            ),
-          const SizedBox(width: 8),
-          Icon(Icons.chevron_right, color: AppTheme.textSecondaryLight),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddFAB(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: AppTheme.primaryGradient,
-        borderRadius: BorderRadius.circular(AppTheme.radiusXL),
-        boxShadow: AppTheme.coloredShadow(AppTheme.primaryColor),
-      ),
-      child: FloatingActionButton.extended(
-        heroTag: 'products_fab',
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        onPressed: () {
-          Get.to(() => const AddProductView());
-        },
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: Text(
-          'add_product'.tr,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+            ],
           ),
-        ),
-      ),
-    );
+        )
+        .animate()
+        .fadeIn(delay: Duration(milliseconds: (50 * index).clamp(0, 300)))
+        .slideX(begin: 0.05);
   }
 }

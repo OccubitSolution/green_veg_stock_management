@@ -69,7 +69,10 @@ class HomeController extends GetxController {
 
     try {
       final vendorId = _storage.read('vendor_id');
-      if (vendorId == null) return;
+      if (vendorId == null || vendorId.toString().isEmpty) {
+        Get.snackbar('Error', 'Vendor ID not found');
+        return;
+      }
 
       // Phase 1 Stats
       // Fetch product count
