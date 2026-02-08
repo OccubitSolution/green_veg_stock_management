@@ -30,13 +30,21 @@ import '../modules/dashboard/views/dashboard_view.dart';
 import '../modules/dashboard/bindings/dashboard_binding.dart';
 
 // Reports
-// Reports
-import '../modules/reports/views/reports_view.dart';
-import '../modules/reports/bindings/reports_binding.dart';
+    import '../modules/reports/views/reports_view.dart';
+    import '../modules/reports/bindings/reports_binding.dart';
+    
+    // Products
+    import '../modules/products/views/products_view.dart';
+    import '../modules/products/bindings/products_binding.dart';
 
-// Products
-import '../modules/products/views/products_view.dart';
-import '../modules/products/bindings/products_binding.dart';
+    // Customers
+    import '../modules/customers/views/customers_view.dart';
+    import '../modules/customers/bindings/customer_binding.dart';
+
+    // Orders
+    import '../modules/orders/views/orders_view.dart';
+    import '../modules/orders/views/purchase_list_view.dart';
+    import '../modules/orders/bindings/order_binding.dart';
 
 class AppPages {
   static const initial = AppRoutes.splash;
@@ -89,13 +97,20 @@ class AppPages {
     // We can keep AppRoutes.home for internal navigation if needed,
     // but the main entry after login should be Dashboard.
 
-    // Products
+// Products
     GetPage(
       name: AppRoutes.products,
       page: () => const ProductsView(),
       binding: ProductsBinding(),
       transition: Transition.rightToLeft,
     ),
+    // TODO: Implement Add Product Page
+    // GetPage(
+    //   name: AppRoutes.addProduct,
+    //   page: () => const AddProductView(),
+    //   binding: ProductsBinding(),
+    //   transition: Transition.rightToLeft,
+    // ),
 
     // Daily Prices
     GetPage(
@@ -113,11 +128,34 @@ class AppPages {
       transition: Transition.rightToLeft,
     ),
 
-    // Reports
+// Reports
     GetPage(
       name: AppRoutes.reports,
       page: () => const ReportsView(),
       binding: ReportsBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    // Customers
+    GetPage(
+      name: AppRoutes.customers,
+      page: () => const CustomersView(),
+      binding: CustomerBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    // Orders
+    GetPage(
+      name: AppRoutes.sales, // Using sales route for orders
+      page: () => const OrdersView(),
+      binding: OrderBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
+    // Purchase List
+    GetPage(
+      name: '/purchase-list',
+      page: () => const PurchaseListView(),
       transition: Transition.rightToLeft,
     ),
   ];

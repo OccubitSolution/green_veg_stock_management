@@ -140,13 +140,63 @@ class AppTranslations extends Translations {
       'pending': 'બાકી',
       'partial': 'આંશિક',
 
-      // Customers & Suppliers
+// Customers & Suppliers
       'customer': 'ગ્રાહક',
       'add_customer': 'ગ્રાહક ઉમેરો',
+      'customer_name': 'ગ્રાહકનું નામ',
+      'contact_person': 'સંપર્ક વ્યક્તિ',
+      'customers_registered': 'ગ્રાહકો નોંધાયેલ',
+      'search_customers': 'ગ્રાહકો શોધો',
+      'delete_customer': 'ગ્રાહક કાઢી નાખો',
+      'delete_customer_confirmation': 'શું તમે ખરેખર @name ને કાઢી નાખવા માંગો છો?',
+      'customer_type': 'ગ્રાહકનો પ્રકાર',
+      'enter_customer_name': 'ગ્રાહકનું નામ દાખલ કરો',
+      'enter_contact_person': 'સંપર્ક વ્યક્તિનું નામ દાખલ કરો',
+      'enter_phone': 'ફોન નંબર દાખલ કરો',
+      'enter_email': 'ઈમેલ દાખલ કરો',
+      'enter_address': 'સરનામું દાખલ કરો',
+      'enter_notes': 'નોંધો દાખલ કરો',
+      'name_required': 'નામ જરૂરી છે',
+      'customer_created': 'ગ્રાહક સફળતાપૂર્વક ઉમેરાયો',
+      'customer_updated': 'ગ્રાહક અપડેટ થયો',
+      'customer_deleted': 'ગ્રાહક કાઢી નાખાયો',
+      'failed_to_load_customers': 'ગ્રાહકો લોડ કરવામાં અસફળ',
+      'failed_to_save_customer': 'ગ્રાહક સાચવવામાં અસફળ',
+      'failed_to_delete_customer': 'ગ્રાહક કાઢવામાં અસફળ',
+      'update_customer': 'ગ્રાહક અપડેટ કરો',
+      'update_customer_info': 'ગ્રાહક માહિતી અપડેટ કરો',
+      'enter_customer_details': 'ગ્રાહક વિગતો દાખલ કરો',
+      'add_customer_to_start': 'શરૂ કરવા માટે ગ્રાહક ઉમેરો',
       'supplier': 'સપ્લાયર',
       'add_supplier': 'સપ્લાયર ઉમેરો',
       'contact': 'સંપર્ક',
       'notes': 'નોંધ',
+
+      // Orders
+      'daily_orders': 'દૈનિક ઓર્ડર',
+      'orders': 'ઓર્ડર',
+      'order': 'ઓર્ડર',
+      'add_new_order': 'નવો ઓર્ડર ઉમેરો',
+      'no_orders_today': 'આજે કોઈ ઓર્ડર નથી',
+      'select_customer_to_add_order': 'ઓર્ડર ઉમેરવા માટે ગ્રાહક પસંદ કરો',
+      'please_select_customer': 'કૃપા કરીને ગ્રાહક પસંદ કરો',
+      'please_add_items': 'કૃપા કરીને આઇટમ્સ ઉમેરો',
+      'search_products': 'પ્રોડક્ટ્સ શોધો',
+      'no_items_added': 'કોઈ આઇટમ ઉમેરેલ નથી',
+      'search_and_add_products': 'પ્રોડક્ટ્સ શોધો અને ઉમેરો',
+      'add_to_order': 'ઓર્ડરમાં ઉમેરો',
+      'save_order': 'ઓર્ડર સાચવો',
+      'order_saved': 'ઓર્ડર સાચવેલ',
+      'failed_to_save_order': 'ઓર્ડર સાચવવામાં અસફળ',
+      'order_deleted': 'ઓર્ડર કાઢી નાખાયો',
+      'failed_to_delete_order': 'ઓર્ડર કાઢવામાં અસફળ',
+      'failed_to_load_orders': 'ઓર્ડર લોડ કરવામાં અસફળ',
+      'items': 'આઇટમ્સ',
+      'optional_notes': 'વૈકલ્પિક નોંધો',
+      'all': 'બધા',
+      'purchase_list': 'ખરીદી યાદી',
+      'total_items': 'કુલ આઇટમ્સ',
+      'total_customers': 'કુલ ગ્રાહકો',
 
       // Stock
       'current_stock': 'હાલનો સ્ટોક',
@@ -197,9 +247,10 @@ class AppTranslations extends Translations {
       'invalid_phone': 'અમાન્ય ફોન નંબર',
       'invalid_number': 'અમાન્ય નંબર',
 
-      // Messages
+// Messages
       'no_data': 'કોઈ ડેટા નથી',
       'no_products': 'કોઈ પ્રોડક્ટ નથી',
+      'no_products_found': 'કોઈ પ્રોડક્ટ મળ્યા નથી',
       'no_customers': 'કોઈ ગ્રાહક નથી',
       'no_purchases': 'કોઈ ખરીદી નથી',
       'no_sales': 'કોઈ વેચાણ નથી',
@@ -209,6 +260,20 @@ class AppTranslations extends Translations {
       'deleted_successfully': 'સફળતાપૂર્વક કાઢી નખાયેલ',
       'something_went_wrong': 'કંઈક ખોટું થયું',
       'check_connection': 'કૃપા કરીને ઇન્ટરનેટ કનેક્શન તપાસો',
+      
+      // Reports
+      'prices_set_today': 'આજના ભાવ સેટ',
+      'product_performance': 'પ્રોડક્ટ પ્રદર્શન',
+      'not_set': 'સેટ નથી',
+      
+      // Dashboard Stats
+      'today_purchases': 'આજની ખરીદી',
+      'today_sales': 'આજું વેચાણ',
+      'pending_orders': 'બાકી ઓર્ડર',
+      
+      // Daily Prices
+      'yesterday': 'ગઈકાલ',
+      'yesterday_price': 'ગઈકાલનો ભાવ',
     },
 
     // English
@@ -345,13 +410,63 @@ class AppTranslations extends Translations {
       'pending': 'Pending',
       'partial': 'Partial',
 
-      // Customers & Suppliers
+// Customers & Suppliers
       'customer': 'Customer',
       'add_customer': 'Add Customer',
+      'customer_name': 'Customer Name',
+      'contact_person': 'Contact Person',
+      'customers_registered': 'customers registered',
+      'search_customers': 'Search customers',
+      'delete_customer': 'Delete Customer',
+      'delete_customer_confirmation': 'Are you sure you want to delete @name?',
+      'customer_type': 'Customer Type',
+      'enter_customer_name': 'Enter customer name',
+      'enter_contact_person': 'Enter contact person name',
+      'enter_phone': 'Enter phone number',
+      'enter_email': 'Enter email',
+      'enter_address': 'Enter address',
+      'enter_notes': 'Enter notes',
+      'name_required': 'Name is required',
+      'customer_created': 'Customer added successfully',
+      'customer_updated': 'Customer updated',
+      'customer_deleted': 'Customer deleted',
+      'failed_to_load_customers': 'Failed to load customers',
+      'failed_to_save_customer': 'Failed to save customer',
+      'failed_to_delete_customer': 'Failed to delete customer',
+      'update_customer': 'Update Customer',
+      'update_customer_info': 'Update customer information',
+      'enter_customer_details': 'Enter customer details',
+      'add_customer_to_start': 'Add a customer to get started',
       'supplier': 'Supplier',
       'add_supplier': 'Add Supplier',
       'contact': 'Contact',
       'notes': 'Notes',
+
+      // Orders
+      'daily_orders': 'Daily Orders',
+      'orders': 'Orders',
+      'order': 'Order',
+      'add_new_order': 'Add New Order',
+      'no_orders_today': 'No Orders Today',
+      'select_customer_to_add_order': 'Select a customer to add order',
+      'please_select_customer': 'Please select a customer',
+      'please_add_items': 'Please add items',
+      'search_products': 'Search products',
+      'no_items_added': 'No Items Added',
+      'search_and_add_products': 'Search and add products',
+      'add_to_order': 'Add to Order',
+      'save_order': 'Save Order',
+      'order_saved': 'Order saved successfully',
+      'failed_to_save_order': 'Failed to save order',
+      'order_deleted': 'Order deleted',
+      'failed_to_delete_order': 'Failed to delete order',
+      'failed_to_load_orders': 'Failed to load orders',
+      'items': 'Items',
+      'optional_notes': 'Optional notes',
+      'all': 'All',
+      'purchase_list': 'Purchase List',
+      'total_items': 'Total Items',
+      'total_customers': 'Total Customers',
 
       // Stock
       'current_stock': 'Current Stock',
@@ -402,9 +517,10 @@ class AppTranslations extends Translations {
       'invalid_phone': 'Invalid phone number',
       'invalid_number': 'Invalid number',
 
-      // Messages
+// Messages
       'no_data': 'No data',
       'no_products': 'No products',
+      'no_products_found': 'No products found',
       'no_customers': 'No customers',
       'no_purchases': 'No purchases',
       'no_sales': 'No sales',
@@ -414,6 +530,20 @@ class AppTranslations extends Translations {
       'deleted_successfully': 'Deleted successfully',
       'something_went_wrong': 'Something went wrong',
       'check_connection': 'Please check internet connection',
+      
+      // Reports
+      'prices_set_today': 'Prices Set Today',
+      'product_performance': 'Product Performance',
+      'not_set': 'Not Set',
+      
+      // Dashboard Stats
+      'today_purchases': "Today's Purchases",
+      'today_sales': "Today's Sales",
+      'pending_orders': 'Pending Orders',
+      
+      // Daily Prices
+      'yesterday': 'Yesterday',
+      'yesterday_price': "Yesterday's Price",
     },
   };
 }

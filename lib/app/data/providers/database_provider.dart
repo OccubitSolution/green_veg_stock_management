@@ -13,6 +13,14 @@ class DatabaseProvider {
 
   bool get isConnected => _connection != null && _isInitialized;
 
+  /// Get the database connection (initializes if needed)
+  Future<Connection> get connection async {
+    if (!isConnected) {
+      await initialize();
+    }
+    return _connection!;
+  }
+
   /// Initialize database connection
   Future<void> initialize() async {
     if (_isInitialized) return;

@@ -26,6 +26,7 @@ class DailyPricesController extends GetxController {
   final products = <Product>[].obs;
   final filteredProducts = <Product>[].obs;
   final prices = <String, double>{}.obs;
+  final yesterdayPrices = <String, double>{}.obs;  // NEW: Track yesterday's prices
 
   @override
   void onInit() {
@@ -92,26 +93,70 @@ class DailyPricesController extends GetxController {
   Future<void> fetchPricesForDate() async {
     try {
       final vendorId = _storage.read('vendor_id');
-      if (vendorId == null) return;
+      if (vendorId == null) {
+        print('❌ [DailyPrices] No vendor ID in storage');
+        return;
+      }
 
+      print('🔍 [DailyPrices] Fetching prices for date: ${selectedDate.value}');
+
+      // Clear existing price text controllers
+      for (var controller in priceControllers.values) {
+        controller.clear();
+      }
+      prices.clear();
+      yesterdayPrices.clear();
+
+      // Fetch prices for selected date
       final priceData = await _priceRepository.getPricesForDate(
         vendorId,
         selectedDate.value,
       );
 
-      prices.clear();
-      for (var item in priceData) {
-        final productId = item['product_id'] as String;
-        final price = (item['price'] as num).toDouble();
-        prices[productId] = price;
+      print('✅ [DailyPrices] Received ${priceData.length} price records');
 
-        if (priceControllers.containsKey(productId)) {
-          priceControllers[productId]!.text = price.toString();
+      // Populate today's prices
+      for (var item in priceData) {
+        final productId = item['product_id'] as String?;
+        final priceValue = item['price'];
+
+        if (productId == null) continue;
+
+        // Handle today's price
+        if (priceValue != null) {
+          final price = (priceValue as num).toDouble();
+          prices[productId] = price;
+
+          if (priceControllers.containsKey(productId)) {
+            priceControllers[productId]!.text = price.toStringAsFixed(2);
+            print('💰 [DailyPrices] Set price for $productId: ₹$price');
+          }
+        }
+
+        // Fetch yesterday's price for this product
+        final yesterdayPrice = await _priceRepository.getYesterdayPrice(
+          vendorId,
+          productId,
+          selectedDate.value,
+        );
+
+        if (yesterdayPrice != null) {
+          yesterdayPrices[productId] = yesterdayPrice;
         }
       }
-    } catch (e) {
-      print('Error fetching prices: $e');
+
+      print('✅ [DailyPrices] Populated ${prices.length} prices and ${yesterdayPrices.length} yesterday prices');
+      prices.refresh();
+      yesterdayPrices.refresh();
+    } catch (e, stackTrace) {
+      print('❌ [DailyPrices] Error fetching prices: $e');
+      print('📍 Stack trace: $stackTrace');
     }
+  }
+
+  /// Get yesterday's price for a product
+  double? getYesterdayPrice(String productId) {
+    return yesterdayPrices[productId];
   }
 
   double? getPriceForProduct(String productId) {

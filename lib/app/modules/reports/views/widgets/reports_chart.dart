@@ -47,7 +47,7 @@ class ReportsChart extends StatelessWidget {
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          horizontalInterval: (maxY - minY) / 5,
+          horizontalInterval: ((maxY - minY) / 5).clamp(1.0, double.infinity),
           getDrawingHorizontalLine: (value) {
             return FlLine(color: Colors.grey.withOpacity(0.1), strokeWidth: 1);
           },
@@ -85,7 +85,7 @@ class ReportsChart extends StatelessWidget {
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              interval: (maxY - minY) / 5,
+              interval: ((maxY - minY) / 5).clamp(1.0, double.infinity),
               getTitlesWidget: (value, meta) {
                 return Text(
                   value.toInt().toString(),

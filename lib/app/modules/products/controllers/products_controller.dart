@@ -9,7 +9,7 @@ import '../../../data/models/models.dart';
 import '../../../data/repositories/product_repository.dart';
 
 class ProductsController extends GetxController {
-  final ProductRepository _productRepository = Get.find<ProductRepository>();
+  late final ProductRepository _productRepository;
   final _storage = GetStorage();
 
   // Controllers
@@ -26,7 +26,16 @@ class ProductsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _initRepository();
     fetchData();
+  }
+
+  void _initRepository() {
+    try {
+      _productRepository = Get.find<ProductRepository>();
+    } catch (e) {
+      print('Error initializing product repository: $e');
+    }
   }
 
   @override

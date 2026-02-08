@@ -47,6 +47,8 @@ class PriceRepository {
   ) async {
     try {
       final dateStr = date.toIso8601String().split('T')[0];
+      print('🔍 [PriceRepo] Fetching prices for date: $dateStr, vendor: $vendorId');
+      
       final result = await _db.query(
         '''
         SELECT 
@@ -61,17 +63,62 @@ class PriceRepository {
         FROM products p
         LEFT JOIN units u ON p.unit_id = u.id
         LEFT JOIN daily_prices dp ON p.id = dp.product_id 
-          AND dp.price_date = @price_date
+          AND dp.price_date = @price_date::date
         WHERE p.vendor_id = @vendor_id AND p.is_active = true
         ORDER BY p.sort_order, p.name_gu
       ''',
         parameters: {'vendor_id': vendorId, 'price_date': dateStr},
       );
 
+      print('✅ [PriceRepo] Found ${result.length} products with prices');
+      
+      // Debug: Print first few results
+      if (result.isNotEmpty) {
+        for (var i = 0; i < result.length && i < 3; i++) {
+          print('📊 [PriceRepo] Product ${result[i]['product_id']}: Price = ${result[i]['price']}');
+        }
+      }
+
       return result;
     } catch (e) {
       print('❌ Get prices for date failed: $e');
       rethrow;
+    }
+  }
+
+  /// Get yesterday's price for a product
+  Future<double?> getYesterdayPrice(String vendorId, String productId, DateTime date) async {
+    try {
+      final yesterday = date.subtract(const Duration(days: 1));
+      final dateStr = yesterday.toIso8601String().split('T')[0];
+      
+      final result = await _db.query(
+        '''
+        SELECT dp.price
+        FROM daily_prices dp
+        JOIN products p ON dp.product_id = p.id
+        WHERE dp.product_id = @product_id
+        AND dp.price_date = @price_date::date
+        AND p.vendor_id = @vendor_id
+        LIMIT 1
+      ''',
+        parameters: {
+          'product_id': productId,
+          'price_date': dateStr,
+          'vendor_id': vendorId,
+        },
+      );
+
+      if (result.isNotEmpty && result.first['price'] != null) {
+        final price = (result.first['price'] as num).toDouble();
+        print('📅 [PriceRepo] Yesterday price for $productId: ₹$price');
+        return price;
+      }
+      
+      return null;
+    } catch (e) {
+      print('❌ Get yesterday price failed: $e');
+      return null;
     }
   }
 

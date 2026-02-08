@@ -197,6 +197,9 @@ class DailyPricesView extends GetView<DailyPricesController> {
       iconColor = categoryColors[product.categoryId] ?? AppTheme.primaryColor;
     }
 
+    // Get yesterday's price for this product
+    final yesterdayPrice = controller.getYesterdayPrice(product.id);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppTheme.spacingSM),
       child: PriceInputCard(
@@ -206,6 +209,8 @@ class DailyPricesView extends GetView<DailyPricesController> {
         onPriceChanged: (value) => controller.updatePrice(product.id, value),
         icon: Icons.eco,
         iconColor: iconColor,
+        yesterdayPrice: yesterdayPrice, // NEW: Pass yesterday's price
+        currentPrice: price, // Current price for comparison
       ),
     );
   }
@@ -218,6 +223,7 @@ class DailyPricesView extends GetView<DailyPricesController> {
         boxShadow: AppTheme.coloredShadow(AppTheme.primaryColor),
       ),
       child: FloatingActionButton.extended(
+        heroTag: 'daily_prices_fab',
         backgroundColor: Colors.transparent,
         elevation: 0,
         onPressed: controller.savePrices,

@@ -87,7 +87,7 @@ class AuthController extends GetxController {
         final pinEnabled = vendor.settings['pin_enabled'] ?? false;
         _storage.write('pin_enabled', pinEnabled);
         if (pinEnabled) {
-          Get.offAllNamed(AppRoutes.dashboard);
+          Get.offAllNamed(AppRoutes.pinLock);
         } else {
           Get.offAllNamed(AppRoutes.pinSetup);
         }
@@ -296,7 +296,7 @@ class AuthController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green.shade100,
       );
-      Get.offAllNamed(AppRoutes.home);
+      Get.offAllNamed(AppRoutes.dashboard);
     } else {
       pinError.value = 'something_went_wrong'.tr;
       resetPinSetup();

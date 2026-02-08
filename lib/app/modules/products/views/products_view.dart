@@ -4,8 +4,8 @@ import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../controllers/products_controller.dart';
 import '../../../theme/app_theme.dart';
-import '../../../routes/app_routes.dart';
 import '../../../widgets/common_widgets.dart';
+import 'add_product_view.dart';
 
 class ProductsView extends GetView<ProductsController> {
   const ProductsView({super.key});
@@ -197,8 +197,9 @@ class ProductsView extends GetView<ProductsController> {
         return EmptyStateWidget(
           icon: Icons.inventory_2_outlined,
           message: 'no_products_found'.tr,
-          actionLabel: 'add_product'.tr,
-          onAction: () => Get.toNamed(AppRoutes.addProduct),
+          // TODO: Enable when Add Product page is implemented
+          // actionLabel: 'add_product'.tr,
+          // onAction: () => Get.toNamed(AppRoutes.addProduct),
         ).animate().fadeIn(duration: 300.ms);
       }
 
@@ -236,7 +237,7 @@ class ProductsView extends GetView<ProductsController> {
       name: product.getName(lang),
       subtitle:
           '${product.unitSymbol ?? 'kg'} • ${product.categoryId ?? 'vegetables'.tr}',
-      price: product.defaultPrice != null ? '₹${product.defaultPrice}' : null,
+      price: product.currentPrice != null ? '₹${product.currentPrice}' : null,
       icon: Icons.eco,
       iconColor: iconColor,
       onTap: () {
@@ -245,7 +246,7 @@ class ProductsView extends GetView<ProductsController> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (product.defaultPrice != null)
+          if (product.currentPrice != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -253,7 +254,7 @@ class ProductsView extends GetView<ProductsController> {
                 borderRadius: BorderRadius.circular(AppTheme.radiusSM),
               ),
               child: Text(
-                '₹${product.defaultPrice}',
+                '₹${product.currentPrice}',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: iconColor,
                   fontWeight: FontWeight.bold,
@@ -275,9 +276,12 @@ class ProductsView extends GetView<ProductsController> {
         boxShadow: AppTheme.coloredShadow(AppTheme.primaryColor),
       ),
       child: FloatingActionButton.extended(
+        heroTag: 'products_fab',
         backgroundColor: Colors.transparent,
         elevation: 0,
-        onPressed: () => Get.toNamed(AppRoutes.addProduct),
+        onPressed: () {
+          Get.to(() => const AddProductView());
+        },
         icon: const Icon(Icons.add, color: Colors.white),
         label: Text(
           'add_product'.tr,

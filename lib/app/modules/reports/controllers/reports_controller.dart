@@ -5,8 +5,8 @@ import '../../../data/repositories/price_repository.dart';
 import '../../../data/models/product_model.dart';
 
 class ReportsController extends GetxController {
-  final ProductRepository _productRepository = Get.find<ProductRepository>();
-  final PriceRepository _priceRepository = Get.find<PriceRepository>();
+  late final ProductRepository _productRepository;
+  late final PriceRepository _priceRepository;
   final _storage = GetStorage();
 
   final isLoading = false.obs;
@@ -22,7 +22,17 @@ class ReportsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _initRepositories();
     fetchReportData();
+  }
+
+  void _initRepositories() {
+    try {
+      _productRepository = Get.find<ProductRepository>();
+      _priceRepository = Get.find<PriceRepository>();
+    } catch (e) {
+      print('Error initializing repositories: $e');
+    }
   }
 
   Future<void> fetchReportData() async {

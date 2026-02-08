@@ -1,4 +1,4 @@
-/// Common Widgets - Reusable UI Components
+﻿/// Common Widgets - Reusable UI Components
 /// Provides gradient cards, stat cards, action tiles and timeline items
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -89,6 +89,7 @@ class AnimatedStatCard extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     value,
@@ -137,28 +138,33 @@ class QuickActionTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppTheme.radiusLG),
         child: Container(
-          padding: const EdgeInsets.all(AppTheme.spacingMD),
+          padding: const EdgeInsets.all(AppTheme.spacingSM),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                  ),
+                  child: Icon(icon, color: color, size: 24),
                 ),
-                child: Icon(icon, color: color, size: 28),
               ),
-              const SizedBox(height: AppTheme.spacingSM),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.textPrimaryLight,
+              const SizedBox(height: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textPrimaryLight,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -284,6 +290,7 @@ class PriceInputCard extends StatelessWidget {
   final Color iconColor;
   final double? previousPrice;
   final double? currentPrice;
+  final double? yesterdayPrice;
 
   const PriceInputCard({
     super.key,
@@ -295,6 +302,7 @@ class PriceInputCard extends StatelessWidget {
     this.iconColor = AppTheme.primaryColor,
     this.previousPrice,
     this.currentPrice,
+    this.yesterdayPrice,
   });
 
   @override
@@ -370,41 +378,58 @@ class PriceInputCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Price Input
-            Container(
-              width: 110,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppTheme.backgroundLight,
-                borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-                border: Border.all(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                ),
-              ),
-              child: TextField(
-                controller: priceController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor,
-                ),
-                decoration: const InputDecoration(
-                  prefixText: '₹ ',
-                  prefixStyle: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryColor,
+            // Price Input with Yesterday's Price
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  width: 110,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppTheme.backgroundLight,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                    border: Border.all(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                    ),
                   ),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 12,
+                  child: TextField(
+                    controller: priceController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryColor,
+                    ),
+                    decoration: const InputDecoration(
+                      prefixText: 'â‚¹ ',
+                      prefixStyle: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryColor,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 12,
+                      ),
+                    ),
+                    onChanged: onPriceChanged,
                   ),
                 ),
-                onChanged: onPriceChanged,
-              ),
+                // Yesterday's Price Display
+                if (yesterdayPrice != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '${'yesterday'.tr}: â‚¹${yesterdayPrice!.toStringAsFixed(2)}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textSecondaryLight,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
