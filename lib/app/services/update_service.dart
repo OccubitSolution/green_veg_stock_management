@@ -4,6 +4,7 @@ library;
 
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:open_filex/open_filex.dart';
@@ -15,12 +16,21 @@ import '../theme/app_theme.dart';
 class UpdateService {
   // ── CONFIGURE THESE ──────────────────────────────────────────────────────
   // Your GitHub username and repo name
-  static const String _githubOwner = 'YOUR_GITHUB_USERNAME';
-  static const String _githubRepo = 'YOUR_REPO_NAME';
+  static const String _githubOwner = 'OccubitSolution';
+  static const String _githubRepo = 'green_veg_stock_management';
   // ─────────────────────────────────────────────────────────────────────────
 
   static const String _apiUrl =
       'https://api.github.com/repos/$_githubOwner/$_githubRepo/releases/latest';
+
+  /// Exposed for testing only.
+  @visibleForTesting
+  static String get apiUrl => _apiUrl;
+
+  /// Exposed for testing only.
+  @visibleForTesting
+  static bool isNewer(String latest, String current) =>
+      _isNewer(latest, current);
 
   static final Dio _dio = Dio();
 
@@ -31,10 +41,14 @@ class UpdateService {
       final info = await PackageInfo.fromPlatform();
       final currentVersion = info.version; // e.g. "1.0.0"
 
+      const githubToken = String.fromEnvironment('GITHUB_TOKEN', defaultValue: '');
       final response = await _dio.get(
         _apiUrl,
         options: Options(
-          headers: {'Accept': 'application/vnd.github+json'},
+          headers: {
+            'Accept': 'application/vnd.github+json',
+            if (githubToken.isNotEmpty) 'Authorization': 'Bearer $githubToken',
+          },
           sendTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 10),
         ),
@@ -92,8 +106,8 @@ class UpdateService {
     final statusText = ''.obs;
 
     Get.dialog(
-      WillPopScope(
-        onWillPop: () async => !isDownloading.value,
+      Obx(() => PopScope(
+        canPop: !isDownloading.value,
         child: AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -186,7 +200,7 @@ class UpdateService {
                   )),
           ],
         ),
-      ),
+      )),
       barrierDismissible: false,
     );
   }
