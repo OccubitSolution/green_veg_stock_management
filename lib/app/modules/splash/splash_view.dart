@@ -117,7 +117,7 @@ class SplashView extends GetView<SplashController> {
               left: 0,
               right: 0,
               child: Text(
-                'v1.0.1',
+                'v1.0.2',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.5),
