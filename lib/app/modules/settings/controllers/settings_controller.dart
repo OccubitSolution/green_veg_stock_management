@@ -60,19 +60,19 @@ class SettingsController extends GetxController {
     try {
       final vendorId = _appController.vendorId.value;
       if (vendorId.isEmpty) {
-        Get.snackbar('error'.tr, 'Vendor ID not found');
+        Get.snackbar('error'.tr, 'vendor_id_not_found'.tr);
         return;
       }
 
       final code = await _authRepository.generateInviteCode(vendorId);
       if (code != null) {
         inviteCode.value = code;
-        Get.snackbar('success'.tr, 'Invite code generated');
+        Get.snackbar('success'.tr, 'invite_code_generated'.tr);
       } else {
-        Get.snackbar('error'.tr, 'Failed to generate invite code');
+        Get.snackbar('error'.tr, 'failed_to_generate_invite'.tr);
       }
     } catch (e) {
-      Get.snackbar('error'.tr, 'Error: ${e.toString()}');
+      Get.snackbar('error'.tr, 'something_went_wrong'.tr);
     }
   }
 
@@ -92,22 +92,22 @@ class SettingsController extends GetxController {
 
   void shareInviteCode() {
     if (inviteCode.value.isEmpty) {
-      Get.snackbar('error'.tr, 'Generate invite code first');
+      Get.snackbar('error'.tr, 'generate_invite_first'.tr);
       return;
     }
     Share.share(
-      'Join my vegetable stock management system!\n\nUse this invite code: ${inviteCode.value}\n\nDownload app and use this code during registration.',
-      subject: 'Vegetable Stock Management Invite',
+      '${'invite_share_message'.tr} ${inviteCode.value}',
+      subject: 'invite_share_subject'.tr,
     );
   }
 
   void copyInviteCode() {
     if (inviteCode.value.isEmpty) {
-      Get.snackbar('error'.tr, 'Generate invite code first');
+      Get.snackbar('error'.tr, 'generate_invite_first'.tr);
       return;
     }
     Clipboard.setData(ClipboardData(text: inviteCode.value));
-    Get.snackbar('success'.tr, 'Invite code copied to clipboard');
+    Get.snackbar('copied'.tr, 'invite_code_copied'.tr);
   }
 
   Future<void> logout() async {

@@ -361,6 +361,15 @@ class AppTranslations extends Translations {
       'failed_to_save_product': 'પ્રોડક્ટ સાચવવામાં નિષ્ફળ',
       'failed_to_load_data': 'ડેટા લોડ કરવામાં નિષ્ફળ',
       'failed_to_pick_image': 'છબી પસંદ કરવામાં નિષ્ફળ',
+
+      // Invite snackbars
+      'vendor_id_not_found': 'વેન્ડર ID મળ્યો નથી',
+      'invite_code_generated': 'ઈન્વાઈટ કોડ જનરેટ થયો',
+      'failed_to_generate_invite': 'ઈન્વાઈટ કોડ જનરેટ કરવામાં નિષ્ફળ',
+      'generate_invite_first': 'પહેલા ઈન્વાઈટ કોડ જનરેટ કરો',
+      'invite_code_copied': 'ઈન્વાઈટ કોડ ક્લિપબોર્ડ પર કૉપિ થયો',
+      'invite_share_message': 'ગ્રીનવેજ સ્ટોક મેનેજમેન્ટ સિસ્ટમમાં જોડાઓ!\n\nઈન્વાઈટ કોડ:',
+      'invite_share_subject': 'ગ્રીનવેજ ઈન્વાઈટ',
     },
 
     // English
@@ -715,6 +724,15 @@ class AppTranslations extends Translations {
       'failed_to_save_product': 'Failed to save product',
       'failed_to_load_data': 'Failed to load data',
       'failed_to_pick_image': 'Failed to pick image',
+
+      // Invite snackbars
+      'vendor_id_not_found': 'Vendor ID not found',
+      'invite_code_generated': 'Invite code generated',
+      'failed_to_generate_invite': 'Failed to generate invite code',
+      'generate_invite_first': 'Generate invite code first',
+      'invite_code_copied': 'Invite code copied to clipboard',
+      'invite_share_message': 'Join GreenVeg Stock Management!\n\nInvite code:',
+      'invite_share_subject': 'GreenVeg Invite',
     },
   };
 }
