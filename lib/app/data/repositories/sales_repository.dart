@@ -1,12 +1,13 @@
+import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:green_veg_stock_management/app/data/models/phase2_models.dart';
 import 'package:green_veg_stock_management/app/data/providers/database_provider.dart';
 
-/// Sales Repository
-/// Handles sales recording and delivery management
+/// Sales Repository – sales recording and delivery management via Supabase REST.
 class SalesRepository {
   final DatabaseProvider _db = DatabaseProvider.instance;
+  SupabaseClient get _client => _db.client;
 
-  /// Get sales by date range
   Future<List<Sale>> getSales(
     String vendorId, {
     DateTime? startDate,
@@ -14,313 +15,255 @@ class SalesRepository {
     SaleStatus? status,
     int limit = 100,
   }) async {
-    final conn = await _db.connection;
+    try {
+      // Build all filters BEFORE order/limit (Supabase requires this)
+      var q = _client
+          .from('sales')
+          .select('*, customers(name, type)')
+          .eq('vendor_id', vendorId);
 
-    String query = '''
-      SELECT 
-        s.*,
-        c.name as customer_name,
-        c.type as customer_type
-      FROM sales s
-      JOIN customers c ON s.customer_id = c.id
-      WHERE s.vendor_id = @vendorId
-    ''';
+      if (startDate != null) {
+        q = q.gte('sale_date', startDate.toIso8601String().split('T')[0]);
+      }
+      if (endDate != null) {
+        q = q.lte('sale_date', endDate.toIso8601String().split('T')[0]);
+      }
+      if (status != null) {
+        q = q.eq('status', status.value);
+      }
 
-    final Map<String, Object> params = {'vendorId': vendorId};
-
-    if (startDate != null) {
-      query += ' AND s.sale_date >= @startDate';
-      params['startDate'] = startDate.toIso8601String().split('T')[0];
+      final rows = await q.order('sale_date', ascending: false).limit(limit);
+      return rows
+          .map((r) => Sale.fromJson(_flattenSale(r as Map<String, dynamic>)))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ getSales failed: $e');
+      return [];
     }
-
-    if (endDate != null) {
-      query += ' AND s.sale_date <= @endDate';
-      params['endDate'] = endDate.toIso8601String().split('T')[0];
-    }
-
-    if (status != null) {
-      query += ' AND s.status = @status';
-      params['status'] = status.value;
-    }
-
-    query += ' ORDER BY s.sale_date DESC, s.created_at DESC LIMIT @limit';
-    params['limit'] = limit;
-
-    final result = await conn.execute(query, parameters: params);
-    return result.map((row) => Sale.fromJson(row.toColumnMap())).toList();
   }
 
-  /// Get sale by ID with items
   Future<Sale?> getSaleById(String saleId) async {
-    final conn = await _db.connection;
-
-    final result = await conn.execute(
-      '''
-      SELECT 
-        s.*,
-        c.name as customer_name,
-        c.type as customer_type
-      FROM sales s
-      JOIN customers c ON s.customer_id = c.id
-      WHERE s.id = @saleId
-    ''',
-      parameters: {'saleId': saleId},
-    );
-
-    if (result.isEmpty) return null;
-    return Sale.fromJson(result.first.toColumnMap());
+    try {
+      final rows = await _client
+          .from('sales')
+          .select('*, customers(name, type)')
+          .eq('id', saleId)
+          .limit(1);
+      if (rows.isEmpty) return null;
+      return Sale.fromJson(_flattenSale(rows.first as Map<String, dynamic>));
+    } catch (e) {
+      debugPrint('❌ getSaleById failed: $e');
+      return null;
+    }
   }
 
-  /// Get sale items
   Future<List<SaleItem>> getSaleItems(String saleId) async {
-    final conn = await _db.connection;
-
-    final result = await conn.execute(
-      '''
-      SELECT 
-        si.*,
-        p.name_gu as product_name_gu,
-        p.name_en as product_name_en,
-        u.symbol as unit_symbol
-      FROM sale_items si
-      JOIN products p ON si.product_id = p.id
-      JOIN units u ON p.unit_id = u.id
-      WHERE si.sale_id = @saleId
-      ORDER BY p.name_en
-    ''',
-      parameters: {'saleId': saleId},
-    );
-
-    return result.map((row) => SaleItem.fromJson(row.toColumnMap())).toList();
+    try {
+      final rows = await _client
+          .from('sale_items')
+          .select('*, products(name_gu, name_en, units(symbol))')
+          .eq('sale_id', saleId);
+      return rows.map((r) {
+        final flat = _flattenItem(r as Map<String, dynamic>);
+        return SaleItem.fromJson(flat);
+      }).toList();
+    } catch (e) {
+      debugPrint('❌ getSaleItems failed: $e');
+      return [];
+    }
   }
 
-  /// Create sale from order
+  /// Create a sale from an existing order.
   Future<Sale> createSaleFromOrder(
     String orderId,
     String vendorId,
     List<SaleItem> items, {
     String? deliveryNotes,
   }) async {
-    final conn = await _db.connection;
+    // Fetch customer from the order
+    final orderRows = await _client
+        .from('orders')
+        .select('customer_id')
+        .eq('id', orderId)
+        .limit(1);
+    if (orderRows.isEmpty) throw Exception('Order not found');
+    final customerId = orderRows.first['customer_id'].toString();
 
-    return await conn.runTx((tx) async {
-      // Get order details
-      final orderResult = await tx.execute(
-        'SELECT customer_id FROM orders WHERE id = @orderId',
-        parameters: {'orderId': orderId},
-      );
+    double total = items.fold(0.0, (s, i) => s + (i.totalPrice ?? 0));
 
-      if (orderResult.isEmpty) {
-        throw Exception('Order not found');
-      }
+    // Create sale
+    final saleRows = await _client.from('sales').insert({
+      'order_id': orderId,
+      'customer_id': customerId,
+      'vendor_id': vendorId,
+      'sale_date': DateTime.now().toIso8601String().split('T')[0],
+      'total_amount': total,
+      'status': 'pending',
+      'delivery_notes': deliveryNotes,
+    }).select();
+    final newSale = Sale.fromJson(saleRows.first as Map<String, dynamic>);
 
-      final customerId = orderResult.first[0] as String;
+    // Insert sale items & deduct stock
+    for (final item in items) {
+      await _client.from('sale_items').insert({
+        'sale_id': newSale.id,
+        'product_id': item.productId,
+        'quantity': item.quantity,
+        'price_per_unit': item.pricePerUnit,
+        'total_price': item.totalPrice,
+        'notes': item.notes,
+      });
+      await _deductStock(vendorId, item.productId, item.quantity);
+    }
 
-      // Calculate total
-      double totalAmount = 0;
-      for (final item in items) {
-        totalAmount += (item.totalPrice ?? 0);
-      }
+    // Mark order confirmed
+    await _client
+        .from('orders')
+        .update({'status': 'confirmed'})
+        .eq('id', orderId);
 
-      // Create sale
-      final saleResult = await tx.execute(
-        '''
-        INSERT INTO sales (
-          order_id, customer_id, vendor_id, sale_date, 
-          total_amount, status, delivery_notes
-        ) VALUES (
-          @orderId, @customerId, @vendorId, CURRENT_DATE,
-          @totalAmount, 'pending', @deliveryNotes
-        )
-        RETURNING *
-      ''',
-        parameters: {
-          'orderId': orderId,
-          'customerId': customerId,
-          'vendorId': vendorId,
-          'totalAmount': totalAmount,
-          'deliveryNotes': deliveryNotes,
-        },
-      );
-
-      final newSale = Sale.fromJson(saleResult.first.toColumnMap());
-
-      // Insert items and deduct stock
-      for (final item in items) {
-        await tx.execute(
-          '''
-          INSERT INTO sale_items (
-            sale_id, product_id, quantity, price_per_unit, total_price, notes
-          ) VALUES (
-            @saleId, @productId, @quantity, @pricePerUnit, @totalPrice, @notes
-          )
-        ''',
-          parameters: {
-            'saleId': newSale.id,
-            'productId': item.productId,
-            'quantity': item.quantity,
-            'pricePerUnit': item.pricePerUnit,
-            'totalPrice': item.totalPrice,
-            'notes': item.notes,
-          },
-        );
-
-        // Deduct from stock
-        await _deductStock(tx, vendorId, item.productId, item.quantity);
-      }
-
-      // Update order status
-      await tx.execute(
-        "UPDATE orders SET status = 'confirmed' WHERE id = @orderId",
-        parameters: {'orderId': orderId},
-      );
-
-      return newSale;
-    });
+    return newSale;
   }
 
-  /// Deduct stock after sale
   Future<void> _deductStock(
-    dynamic tx,
     String vendorId,
     String productId,
     double quantity,
   ) async {
-    // Get stock
-    final stockResult = await tx.execute(
-      '''
-      SELECT id, quantity FROM stock 
-      WHERE vendor_id = @vendorId AND product_id = @productId
-    ''',
-      parameters: {'vendorId': vendorId, 'productId': productId},
-    );
+    final existing = await _client
+        .from('stock')
+        .select('id, quantity')
+        .eq('vendor_id', vendorId)
+        .eq('product_id', productId);
 
-    if (stockResult.isEmpty) {
-      // Create negative stock (oversold)
-      final newStock = await tx.execute(
-        '''
-        INSERT INTO stock (vendor_id, product_id, quantity)
-        VALUES (@vendorId, @productId, @quantity)
-        RETURNING id
-      ''',
-        parameters: {
-          'vendorId': vendorId,
-          'productId': productId,
-          'quantity': -quantity,
-        },
-      );
-
-      // Record movement
-      await tx.execute(
-        '''
-        INSERT INTO stock_movements (stock_id, movement_type, quantity, reference_type, notes)
-        VALUES (@stockId, 'sale', @quantity, 'sale', 'Sale - insufficient stock')
-      ''',
-        parameters: {'stockId': newStock.first[0], 'quantity': -quantity},
-      );
+    if (existing.isEmpty) {
+      final inserted = await _client
+          .from('stock')
+          .insert({
+            'vendor_id': vendorId,
+            'product_id': productId,
+            'quantity': -quantity,
+          })
+          .select('id');
+      await _client.from('stock_movements').insert({
+        'stock_id': inserted.first['id'],
+        'movement_type': 'sale',
+        'quantity': -quantity,
+        'reference_type': 'sale',
+        'notes': 'Sale - insufficient stock',
+      });
     } else {
-      final stockId = stockResult.first[0] as String;
-
-      // Update stock
-      await tx.execute(
-        '''
-        UPDATE stock 
-        SET quantity = quantity - @quantity,
-            last_updated = CURRENT_TIMESTAMP
-        WHERE id = @stockId
-      ''',
-        parameters: {'stockId': stockId, 'quantity': quantity},
-      );
-
-      // Record movement
-      await tx.execute(
-        '''
-        INSERT INTO stock_movements (stock_id, movement_type, quantity, reference_type, notes)
-        VALUES (@stockId, 'sale', @quantity, 'sale', 'Sale completed')
-      ''',
-        parameters: {'stockId': stockId, 'quantity': -quantity},
-      );
+      final stockId = existing.first['id'].toString();
+      final current = double.parse(existing.first['quantity'].toString());
+      await _client
+          .from('stock')
+          .update({
+            'quantity': current - quantity,
+            'last_updated': DateTime.now().toIso8601String(),
+          })
+          .eq('id', stockId);
+      await _client.from('stock_movements').insert({
+        'stock_id': stockId,
+        'movement_type': 'sale',
+        'quantity': -quantity,
+        'reference_type': 'sale',
+        'notes': 'Sale completed',
+      });
     }
   }
 
-  /// Mark sale as delivered
   Future<void> markDelivered(String saleId) async {
-    final conn = await _db.connection;
-
-    await conn.execute(
-      '''
-      UPDATE sales 
-      SET status = 'delivered', updated_at = CURRENT_TIMESTAMP
-      WHERE id = @saleId
-    ''',
-      parameters: {'saleId': saleId},
-    );
+    await _client
+        .from('sales')
+        .update({
+          'status': 'delivered',
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', saleId);
   }
 
-  /// Record payment
   Future<void> recordPayment(String saleId, double amount) async {
-    final conn = await _db.connection;
-
-    await conn.execute(
-      '''
-      UPDATE sales 
-      SET paid_amount = paid_amount + @amount,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = @saleId
-    ''',
-      parameters: {'saleId': saleId, 'amount': amount},
-    );
+    final rows = await _client
+        .from('sales')
+        .select('paid_amount')
+        .eq('id', saleId)
+        .limit(1);
+    if (rows.isEmpty) return;
+    final current = double.parse(rows.first['paid_amount'].toString());
+    await _client
+        .from('sales')
+        .update({
+          'paid_amount': current + amount,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', saleId);
   }
 
-  /// Get sales stats
   Future<Map<String, dynamic>> getSalesStats(
     String vendorId,
     DateTime date,
   ) async {
-    final conn = await _db.connection;
-    final dateStr = date.toIso8601String().split('T')[0];
+    try {
+      final dateStr = date.toIso8601String().split('T')[0];
+      final rows = await _client
+          .from('sales')
+          .select('total_amount, paid_amount')
+          .eq('vendor_id', vendorId)
+          .eq('sale_date', dateStr);
+      final list = rows;
+      double revenue = list.fold(0.0, (s, r) => s + (r['total_amount'] ?? 0));
+      double paid = list.fold(0.0, (s, r) => s + (r['paid_amount'] ?? 0));
+      return {
+        'totalSales': list.length,
+        'totalRevenue': revenue,
+        'totalPaid': paid,
+        'totalPending': revenue - paid,
+      };
+    } catch (e) {
+      debugPrint('❌ getSalesStats failed: $e');
+      return {
+        'totalSales': 0,
+        'totalRevenue': 0.0,
+        'totalPaid': 0.0,
+        'totalPending': 0.0,
+      };
+    }
+  }
 
-    final result = await conn.execute(
-      '''
-      SELECT 
-        COUNT(*) as total_sales,
-        COALESCE(SUM(total_amount), 0) as total_revenue,
-        COALESCE(SUM(paid_amount), 0) as total_paid,
-        COALESCE(SUM(total_amount - paid_amount), 0) as total_pending
-      FROM sales
-      WHERE vendor_id = @vendorId AND sale_date = @dateStr
-    ''',
-      parameters: {'vendorId': vendorId, 'dateStr': dateStr},
-    );
+  Future<List<Sale>> getPendingDeliveries(String vendorId) async {
+    try {
+      final rows = await _client
+          .from('sales')
+          .select('*, customers(name, type)')
+          .eq('vendor_id', vendorId)
+          .eq('status', 'pending')
+          .order('sale_date');
+      return rows
+          .map((r) => Sale.fromJson(_flattenSale(r as Map<String, dynamic>)))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ getPendingDeliveries failed: $e');
+      return [];
+    }
+  }
 
-    final row = result.first.toColumnMap();
+  Map<String, dynamic> _flattenSale(Map<String, dynamic> r) {
+    final customer = r['customers'] as Map<String, dynamic>? ?? {};
     return {
-      'totalSales': int.parse(row['total_sales'].toString()),
-      'totalRevenue': double.parse(row['total_revenue'].toString()),
-      'totalPaid': double.parse(row['total_paid'].toString()),
-      'totalPending': double.parse(row['total_pending'].toString()),
+      ...r,
+      'customer_name': customer['name'],
+      'customer_type': customer['type'],
     };
   }
 
-  /// Get pending deliveries
-  Future<List<Sale>> getPendingDeliveries(String vendorId) async {
-    final conn = await _db.connection;
-
-    final result = await conn.execute(
-      '''
-      SELECT 
-        s.*,
-        c.name as customer_name,
-        c.type as customer_type
-      FROM sales s
-      JOIN customers c ON s.customer_id = c.id
-      WHERE s.vendor_id = @vendorId
-      AND s.status = 'pending'
-      ORDER BY s.sale_date ASC
-    ''',
-      parameters: {'vendorId': vendorId},
-    );
-
-    return result.map((row) => Sale.fromJson(row.toColumnMap())).toList();
+  Map<String, dynamic> _flattenItem(Map<String, dynamic> r) {
+    final product = r['products'] as Map<String, dynamic>? ?? {};
+    final unit = product['units'] as Map<String, dynamic>? ?? {};
+    return {
+      ...r,
+      'product_name_gu': product['name_gu'],
+      'product_name_en': product['name_en'],
+      'unit_symbol': unit['symbol'],
+    };
   }
 }

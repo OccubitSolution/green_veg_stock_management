@@ -16,6 +16,11 @@ class AppController extends GetxController {
   final RxBool isLoggedIn = false.obs;
   final RxBool isPinEnabled = false.obs;
   final RxString currentLanguage = 'gu'.obs;
+  
+  // Role-based access
+  final RxString role = ''.obs;
+  final RxString inviterId = ''.obs;
+  final RxString inviterName = ''.obs;
 
   @override
   void onInit() {
@@ -29,6 +34,9 @@ class AppController extends GetxController {
     isLoggedIn.value = _storage.read('is_logged_in') ?? false;
     isPinEnabled.value = _storage.read('pin_enabled') ?? false;
     currentLanguage.value = _storage.read('language') ?? 'gu';
+    role.value = _storage.read('role') ?? '';
+    inviterId.value = _storage.read('inviter_id') ?? '';
+    inviterName.value = _storage.read('inviter_name') ?? '';
   }
 
   /// Set logged in vendor
@@ -36,10 +44,26 @@ class AppController extends GetxController {
     required String id,
     required String name,
     required String email,
+    String? userRole,
+    String? invitedBy,
+    String? inviterName,
   }) async {
     vendorId.value = id;
     vendorName.value = name;
     isLoggedIn.value = true;
+    
+    if (userRole != null) {
+      role.value = userRole;
+      await _storage.write('role', userRole);
+    }
+    if (invitedBy != null) {
+      inviterId.value = invitedBy;
+      await _storage.write('inviter_id', invitedBy);
+    }
+    if (inviterName != null) {
+      this.inviterName.value = inviterName;
+      await _storage.write('inviter_name', inviterName);
+    }
 
     await _storage.write('vendor_id', id);
     await _storage.write('vendor_name', name);

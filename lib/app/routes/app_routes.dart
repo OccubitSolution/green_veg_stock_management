@@ -9,8 +9,6 @@ abstract class AppRoutes {
   static const login = '/login';
   static const register = '/register';
   static const forgotPassword = '/forgot-password';
-  static const pinSetup = '/pin-setup';
-  static const pinLock = '/pin-lock';
 
   // Main
   static const home = '/home';
@@ -43,6 +41,7 @@ abstract class AppRoutes {
   static const orders = '/orders';
   static const orderDetail = '/orders/detail';
   static const addOrder = '/orders/add';
+  static const simpleOrder = '/orders/simple';
   static const purchaseList = '/orders/purchase-list';
 
   // Customers

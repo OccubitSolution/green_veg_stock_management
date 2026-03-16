@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:green_veg_stock_management/app/controllers/app_controller.dart';
 import 'package:green_veg_stock_management/app/data/models/customer_order_models.dart';
 import 'package:green_veg_stock_management/app/data/repositories/order_repository.dart';
+import 'package:green_veg_stock_management/app/theme/app_theme.dart';
 
 /// Purchase List View
 /// Shows aggregated orders - the KEY feature for the vegetable broker
@@ -25,16 +27,17 @@ class _PurchaseListViewState extends State<PurchaseListView> {
   List<AggregatedOrderItem> aggregatedItems = [];
   bool isLoading = false;
   Map<String, dynamic> stats = {};
+  
+  // Track purchased items (product ID -> isPurchased)
+  final Map<String, bool> _purchasedItems = {};
 
-  // Exact sizing specifications
-  static const double _headerHeight = 180.0;
-  static const double _cardBorderRadius = 16.0;
-  static const double _iconSize = 24.0;
-  static const double _spacingXS = 4.0;
-  static const double _spacingSM = 8.0;
-  static const double _spacingMD = 16.0;
-  static const double _spacingLG = 24.0;
-  static const double _spacingXL = 32.0;
+  // Compact sizing specifications
+  static const double _cardBorderRadius = 12.0; // Reduced from 16
+  static const double _spacingXS = 3.0; // Reduced from 4
+  static const double _spacingSM = 6.0; // Reduced from 8
+  static const double _spacingMD = 10.0; // Reduced from 16
+  static const double _spacingLG = 16.0; // Reduced from 24
+  static const double _spacingXL = 20.0; // Reduced from 32
 
   @override
   void initState() {
@@ -58,13 +61,18 @@ class _PurchaseListViewState extends State<PurchaseListView> {
         return;
       }
 
+      // Check if user is staff - use inviter's orders
+      final inviterId = _appController.inviterId.value;
+      
       final items = await _repository.getAggregatedOrders(
         vendorId,
         selectedDate,
+        inviterVendorId: inviterId.isNotEmpty ? inviterId : null,
       );
       final orderStats = await _repository.getOrderStats(
         vendorId,
         selectedDate,
+        inviterVendorId: inviterId.isNotEmpty ? inviterId : null,
       );
 
       setState(() {
@@ -77,7 +85,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
       debugPrint('Purchase list error: $e');
       Get.snackbar(
         'error'.tr,
-        'Failed to load: ${e.toString().length > 100 ? e.toString().substring(0, 100) : e.toString()}',
+        'Failed to load: ${e.toString().substring(0, e.toString().length.clamp(0, 100))}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red[100],
         duration: const Duration(seconds: 5),
@@ -112,7 +120,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
 
     buffer.writeln('═' * 40);
     buffer.writeln('${'total_items'.tr}: ${aggregatedItems.length}');
-    buffer.writeln('${'total_customers'.tr}: ${stats['totalCustomers']}');
+    buffer.writeln('${'total_customers'.tr}: ${stats['totalCustomers'] ?? 0}');
 
     return buffer.toString();
   }
@@ -120,17 +128,11 @@ class _PurchaseListViewState extends State<PurchaseListView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F6),
+      backgroundColor: AppTheme.backgroundLight,
       body: Column(
         children: [
-          // Header
-          _buildHeader(context),
-
-          // Date Selector
-          _buildDateSelector(context),
-
-          // Stats Cards
-          _buildStatsRow(context),
+          // Compact Header with inline stats
+          _buildCompactHeader(context),
 
           // Purchase List
           Expanded(
@@ -148,233 +150,147 @@ class _PurchaseListViewState extends State<PurchaseListView> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildCompactHeader(BuildContext context) {
     return Container(
-      height: _headerHeight,
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF00897B), Color(0xFF004D40)],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(_cardBorderRadius),
-          bottomRight: Radius.circular(_cardBorderRadius),
-        ),
+        gradient: AppTheme.primaryGradient,
       ),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(_spacingMD),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        bottom: false,
+        child: Column(
+          children: [
+            // Title row
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
                 children: [
                   IconButton(
                     onPressed: () => Get.back(),
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
+                    constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                   ),
-
-                  const Text(
-                    'Purchase List',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
+                  Expanded(
+                    child: Text(
+                      'purchase_list'.tr,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-
-                  // Refresh Button
                   IconButton(
                     onPressed: _loadAggregatedData,
-                    icon: Container(
-                      padding: const EdgeInsets.all(_spacingSM),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.refresh,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
+                    icon: const Icon(Icons.refresh, color: Colors.white, size: 22),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                   ),
                 ],
               ),
-
-              const SizedBox(height: _spacingLG),
-
-              // Subtitle
-              Text(
-                'Aggregated quantities from all customer orders',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 14,
-                ),
+            ),
+            
+            // Date selector - inline compact
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
               ),
-            ],
-          ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: () => _setDate(selectedDate.subtract(const Duration(days: 1))),
+                    icon: const Icon(Icons.chevron_left, color: Colors.white, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  ),
+                  GestureDetector(
+                    onTap: () async {
+                      final DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2030),
+                      );
+                      if (picked != null) _setDate(picked);
+                    },
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_today, size: 14, color: Colors.white),
+                        const SizedBox(width: 6),
+                        Text(
+                          DateFormat('dd MMM yyyy').format(selectedDate),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _setDate(selectedDate.add(const Duration(days: 1))),
+                    icon: const Icon(Icons.chevron_right, color: Colors.white, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Inline stats - single row
+            Container(
+              margin: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildInlineStat(Icons.inventory_2, aggregatedItems.length.toString(), 'items'.tr),
+                  Container(width: 1, height: 24, color: Colors.white.withValues(alpha: 0.3)),
+                  _buildInlineStat(Icons.people, (stats['totalCustomers'] ?? 0).toString(), 'customers'.tr),
+                  Container(width: 1, height: 24, color: Colors.white.withValues(alpha: 0.3)),
+                  _buildInlineStat(Icons.receipt, (stats['totalOrders'] ?? 0).toString(), 'orders'.tr),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
-
-  Widget _buildDateSelector(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(_spacingMD),
-      padding: const EdgeInsets.symmetric(
-        horizontal: _spacingSM,
-        vertical: _spacingXS,
-      ),
-      height: 56,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+  
+  Widget _buildInlineStat(IconData icon, String value, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: Colors.white, size: 16),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () =>
-                _setDate(selectedDate.subtract(const Duration(days: 1))),
-            icon: const Icon(Icons.chevron_left, color: Color(0xFF00695C)),
-            padding: EdgeInsets.zero,
+        ),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.8),
+            fontSize: 11,
           ),
-          Expanded(
-            child: GestureDetector(
-              onTap: () async {
-                final DateTime? picked = await showDatePicker(
-                  context: context,
-                  initialDate: selectedDate,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2030),
-                  builder: (context, child) {
-                    return Theme(
-                      data: Theme.of(context).copyWith(
-                        colorScheme: const ColorScheme.light(
-                          primary: Color(0xFF00695C),
-                        ),
-                      ),
-                      child: child!,
-                    );
-                  },
-                );
-                if (picked != null) _setDate(picked);
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.calendar_today,
-                    size: 18,
-                    color: Color(0xFF00695C),
-                  ),
-                  const SizedBox(width: _spacingSM),
-                  Text(
-                    DateFormat('EEE, dd MMM yyyy').format(selectedDate),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: () =>
-                _setDate(selectedDate.add(const Duration(days: 1))),
-            icon: const Icon(Icons.chevron_right, color: Color(0xFF00695C)),
-            padding: EdgeInsets.zero,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatsRow(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: _spacingMD),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildStatCard(
-              Icons.inventory,
-              aggregatedItems.length.toString(),
-              'Products',
-              const Color(0xFF00897B),
-            ),
-          ),
-          const SizedBox(width: _spacingMD),
-          Expanded(
-            child: _buildStatCard(
-              Icons.people,
-              (stats['totalCustomers'] ?? 0).toString(),
-              'Customers',
-              const Color(0xFF5C6BC0),
-            ),
-          ),
-          const SizedBox(width: _spacingMD),
-          Expanded(
-            child: _buildStatCard(
-              Icons.receipt,
-              (stats['totalOrders'] ?? 0).toString(),
-              'Orders',
-              const Color(0xFFFF7043),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(
-    IconData icon,
-    String value,
-    String label,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(_spacingMD),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: _iconSize),
-          const SizedBox(height: _spacingXS),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A1A),
-            ),
-          ),
-          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -443,27 +359,27 @@ class _PurchaseListViewState extends State<PurchaseListView> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: const Color(0xFF00695C).withValues(alpha: 0.08),
+              color: AppTheme.primaryDark.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.shopping_cart_outlined,
               size: 56,
-              color: Color(0xFF00695C),
+              color: AppTheme.primaryDark,
             ),
           ),
           const SizedBox(height: _spacingLG),
           Text(
-            'No Orders Yet',
+            'no_orders_yet'.tr,
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A1A),
+              color: AppTheme.textPrimaryLight,
             ),
           ),
           const SizedBox(height: _spacingSM),
           Text(
-            'Add customer orders to generate purchase list',
+            'add_orders_to_generate'.tr,
             style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
@@ -482,7 +398,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
               ),
             ),
             icon: const Icon(Icons.add),
-            label: const Text('Add Orders'),
+            label: Text('add_orders'.tr),
           ),
         ],
       ),
@@ -491,7 +407,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
 
   Widget _buildPurchaseList() {
     return ListView.builder(
-      padding: const EdgeInsets.all(_spacingMD),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 80), // Reduced padding
       itemCount: aggregatedItems.length,
       itemBuilder: (context, index) {
         final item = aggregatedItems[index];
@@ -501,123 +417,132 @@ class _PurchaseListViewState extends State<PurchaseListView> {
   }
 
   Widget _buildPurchaseItemCard(AggregatedOrderItem item, int index) {
+    final isPurchased = _purchasedItems[item.productId] ?? false;
+    
+    // Generate compact customer breakdown: "User1: 1kg, User2: 32kg, User3: 1.5kg"
+    final breakdownText = item.itemDetails.map((d) => 
+      '${d.customerName}: ${d.quantity.toStringAsFixed(d.quantity % 1 == 0 ? 0 : 1)}${item.unitSymbol}'
+    ).join(', ');
+
     return Container(
-      margin: const EdgeInsets.only(bottom: _spacingMD),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isPurchased ? Colors.green[50] : Colors.white,
         borderRadius: BorderRadius.circular(_cardBorderRadius),
+        border: Border.all(
+          color: isPurchased ? Colors.green[300]! : Colors.grey[200]!,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: _spacingMD),
-          childrenPadding: const EdgeInsets.all(_spacingMD),
-          expandedCrossAxisAlignment: CrossAxisAlignment.start,
-          leading: Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF00897B), Color(0xFF00695C)],
-              ),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.eco, color: Colors.white, size: 24),
-          ),
-          title: Text(
-            item.getProductName(Get.locale?.languageCode ?? 'en'),
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A1A),
-            ),
-          ),
-          subtitle: Text(
-            '${item.orderCount} customers ordered this',
-            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-          ),
-          trailing: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: _spacingMD,
-              vertical: _spacingSM,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFF00897B).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              '${item.totalQuantity.toStringAsFixed(1)} ${item.unitSymbol}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF00897B),
-              ),
-            ),
-          ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
           children: [
-            const Divider(height: 1),
-            const SizedBox(height: _spacingMD),
-            Text(
-              'Customer Breakdown:',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
+            // Compact checkbox
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  if (isPurchased) {
+                    _purchasedItems.remove(item.productId);
+                  } else {
+                    _purchasedItems[item.productId] = true;
+                  }
+                });
+              },
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: isPurchased ? Colors.green : Colors.transparent,
+                  border: Border.all(
+                    color: isPurchased ? Colors.green : Colors.grey[400]!,
+                    width: 2,
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: isPurchased 
+                  ? const Icon(Icons.check, color: Colors.white, size: 16)
+                  : null,
               ),
             ),
-            const SizedBox(height: _spacingSM),
-            ...item.itemDetails.map(
-              (detail) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: _spacingXS),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: 16,
-                      color: Colors.grey[500],
-                    ),
-                    const SizedBox(width: _spacingSM),
-                    Expanded(
-                      child: Text(
-                        detail.customerName,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+            const SizedBox(width: 10),
+            
+            // Product info - single column, compact
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.getProductName(Get.locale?.languageCode ?? 'en'),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: isPurchased ? Colors.grey[600] : AppTheme.textPrimaryLight,
+                            decoration: isPurchased ? TextDecoration.lineThrough : null,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    Text(
-                      '${detail.quantity.toStringAsFixed(1)} ${item.unitSymbol}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A1A),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: isPurchased 
+                            ? Colors.green.withValues(alpha: 0.15)
+                            : AppTheme.primaryColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${item.totalQuantity.toStringAsFixed(item.totalQuantity % 1 == 0 ? 0 : 1)} ${item.unitSymbol}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: isPurchased ? Colors.green[700] : AppTheme.primaryColor,
+                          ),
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    breakdownText,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isPurchased ? Colors.grey[500] : Colors.grey[600],
                     ),
-                  ],
-                ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
-    ).animate(delay: (index * 50).ms).fadeIn().slideY(begin: 0.1);
+    ).animate(delay: (index * 30).ms).fadeIn(duration: 200.ms).slideY(begin: 0.05);
   }
 
   Widget _buildBottomBar(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(_spacingMD),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
           ),
         ],
       ),
@@ -630,46 +555,54 @@ class _PurchaseListViewState extends State<PurchaseListView> {
                   final text = _generateShareText();
                   Clipboard.setData(ClipboardData(text: text));
                   Get.snackbar(
-                    'Copied!',
-                    'Purchase list copied to clipboard',
+                    'copied'.tr,
+                    'purchase_list_copied'.tr,
                     snackPosition: SnackPosition.BOTTOM,
+                    duration: const Duration(seconds: 2),
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5C6BC0),
+                  backgroundColor: AppTheme.info,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: _spacingMD),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                icon: const Icon(Icons.copy),
-                label: const Text('Copy'),
+                icon: const Icon(Icons.copy, size: 18),
+                label: Text('copy'.tr, style: const TextStyle(fontSize: 14)),
               ),
             ),
-            const SizedBox(width: _spacingMD),
+            const SizedBox(width: 10),
             Expanded(
               flex: 2,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  _generateShareText();
-                  // Use share plugin here
-                  Get.snackbar(
-                    'Share',
-                    'Sharing functionality will be implemented',
-                    snackPosition: SnackPosition.BOTTOM,
-                  );
+                onPressed: () async {
+                  final text = _generateShareText();
+                  try {
+                    await Share.share(
+                      text,
+                      subject: 'Purchase List - ${DateFormat('dd MMM yyyy').format(selectedDate)}',
+                    );
+                  } catch (e) {
+                    Get.snackbar(
+                      'error'.tr,
+                      'Failed to share: $e',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.red[100],
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00695C),
+                  backgroundColor: AppTheme.primaryDark,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: _spacingMD),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                icon: const Icon(Icons.share),
-                label: const Text('Share List'),
+                icon: const Icon(Icons.share, size: 18),
+                label: Text('share_list'.tr, style: const TextStyle(fontSize: 14)),
               ),
             ),
           ],

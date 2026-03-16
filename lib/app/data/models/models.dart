@@ -141,6 +141,9 @@ class Vendor {
   final Map<String, dynamic> settings;
   final bool isActive;
   final DateTime createdAt;
+  final String? role;
+  final String? invitedBy;
+  final String? inviteCode;
 
   Vendor({
     required this.id,
@@ -150,6 +153,9 @@ class Vendor {
     this.settings = const {},
     this.isActive = true,
     required this.createdAt,
+    this.role,
+    this.invitedBy,
+    this.inviteCode,
   });
 
   factory Vendor.fromJson(Map<String, dynamic> json) {
@@ -161,6 +167,9 @@ class Vendor {
       settings: json['settings'] as Map<String, dynamic>? ?? {},
       isActive: json['is_active'] as bool? ?? true,
       createdAt: parseDateTime(json['created_at']),
+      role: json['role'] as String?,
+      invitedBy: json['invited_by'] as String?,
+      inviteCode: json['invite_code'] as String?,
     );
   }
 }

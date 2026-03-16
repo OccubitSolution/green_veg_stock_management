@@ -1,163 +1,278 @@
 /// Database Provider
 ///
-/// Manages PostgreSQL connection to Neon database
+/// Thin wrapper around the Supabase REST client.
+/// Previously used the `postgres` raw socket package; now uses
+/// `supabase_flutter` so all traffic goes over HTTPS (port 443) and
+/// is never blocked by mobile-network firewalls.
 library;
 
 import 'package:flutter/foundation.dart';
-import 'package:postgres/postgres.dart';
-import '../../../core/constants/app_constants.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/cache_service.dart';
+import '../services/connectivity_service.dart';
 
 class DatabaseProvider {
   DatabaseProvider._();
   static final DatabaseProvider instance = DatabaseProvider._();
 
-  Connection? _connection;
-  bool _isInitialized = false;
+  final _cache = CacheService();
+  // ignore: unused_field
+  final _connectivity = ConnectivityService();
 
-  bool get isConnected => _connection != null && _isInitialized;
+  /// The underlying Supabase client (initialised in main.dart).
+  SupabaseClient get client => Supabase.instance.client;
 
-  /// Get the database connection (initializes if needed)
-  Future<Connection> get connection async {
-    if (!isConnected) {
-      await initialize();
-    }
-    return _connection!;
-  }
+  /// Always "connected" – Supabase manages HTTP sessions internally.
+  bool get isConnected => true;
 
-  /// Initialize database connection
+  /// No-op: Supabase is initialised once in main.dart via
+  /// `Supabase.initialize(...)`.
   Future<void> initialize() async {
-    if (_isInitialized) return;
+    debugPrint('✅ Supabase REST client ready');
+  }
 
-    try {
-      final endpoint = Endpoint(
-        host: AppConstants.dbHost,
-        port: AppConstants.dbPort,
-        database: AppConstants.dbName,
-        username: AppConstants.dbUser,
-        password: AppConstants.dbPassword,
-      );
+  // ─── Cache helpers ──────────────────────────────────────────────────
 
-      _connection = await Connection.open(
-        endpoint,
-        settings: ConnectionSettings(sslMode: SslMode.require),
-      );
+  String _boxForTable(String table) {
+    if (table.contains('product') || table.contains('unit')) {
+      return CacheService.productsBox;
+    } else if (table.contains('categor')) {
+      return CacheService.categoriesBox;
+    } else if (table.contains('customer')) {
+      return CacheService.customersBox;
+    } else if (table.contains('price')) {
+      return CacheService.pricesBox;
+    } else if (table.contains('order')) {
+      return CacheService.ordersBox;
+    }
+    return CacheService.analyticsBox;
+  }
 
-      _isInitialized = true;
-      debugPrint('✅ Database connected successfully');
-    } catch (e) {
-      debugPrint('❌ Database connection failed: $e');
-      rethrow;
+  List<Map<String, dynamic>>? _fromCache(String table, String key) {
+    switch (_boxForTable(table)) {
+      case CacheService.productsBox:
+        return _cache.getCachedProducts(key);
+      case CacheService.categoriesBox:
+        return _cache.getCachedCategories(key);
+      case CacheService.customersBox:
+        return _cache.getCachedCustomers(key);
+      case CacheService.pricesBox:
+        return _cache.getCachedPrices(key);
+      case CacheService.ordersBox:
+        return _cache.getCachedOrders(key);
+      default:
+        return null;
     }
   }
 
-  /// Execute a query and return results
+  void _toCache(String table, String key, List<Map<String, dynamic>> data) {
+    switch (_boxForTable(table)) {
+      case CacheService.productsBox:
+        _cache.cacheProducts(key, data);
+      case CacheService.categoriesBox:
+        _cache.cacheCategories(key, data);
+      case CacheService.customersBox:
+        _cache.cacheCustomers(key, data);
+      case CacheService.pricesBox:
+        _cache.cachePrices(key, data);
+      case CacheService.ordersBox:
+        _cache.cacheOrders(key, data);
+      default:
+        _cache.cacheAnalytics(key, 'query', data);
+    }
+  }
+
+  // ─── CRUD wrappers ───────────────────────────────────────────────────
+
+  /// SELECT rows from [table] where every key in [match] equals its value.
+  /// Falls back to cache when offline.
   Future<List<Map<String, dynamic>>> query(
-    String sql, {
-    Map<String, dynamic>? parameters,
+    String table, {
+    Map<String, dynamic>? match,
+    bool useCache = false,
+    String? cacheKey,
+    int cacheMinutes = 30,
   }) async {
-    if (!isConnected) {
-      await initialize();
+    if (useCache && cacheKey != null) {
+      final box = _boxForTable(table);
+      if (_cache.isCacheValid(box, cacheKey, maxAgeMinutes: cacheMinutes)) {
+        final cached = _fromCache(table, cacheKey);
+        if (cached != null) {
+          debugPrint('📦 Cache hit: $cacheKey');
+          return cached;
+        }
+      }
     }
 
     try {
-      // debugPrint('🔍 Query: $sql');
-      // debugPrint('🔍 Params: $parameters');
-
-      final result = await _connection!.execute(
-        Sql.named(sql),
-        parameters: parameters,
-      );
-
-      return result.map((row) => row.toColumnMap()).toList();
+      var q = client.from(table).select();
+      if (match != null) {
+        for (final entry in match.entries) {
+          q = q.eq(entry.key, entry.value);
+        }
+      }
+      final rows = await q;
+      final data = List<Map<String, dynamic>>.from(rows);
+      if (useCache && cacheKey != null) {
+        _toCache(table, cacheKey, data);
+      }
+      return data;
     } catch (e) {
-      debugPrint('❌ Query failed: $e');
+      debugPrint('❌ query($table) failed: $e');
+      if (useCache && cacheKey != null) {
+        final cached = _fromCache(table, cacheKey);
+        if (cached != null) return cached;
+      }
       rethrow;
     }
   }
 
-  /// Execute insert and return the inserted row
+  /// INSERT a single row and return it.
   Future<Map<String, dynamic>?> insert(
     String table,
-    Map<String, dynamic> data, {
-    String returning = '*',
-  }) async {
-    final columns = data.keys.join(', ');
-    final values = data.keys.map((k) => '@$k').join(', ');
-
-    final sql =
-        '''
-      INSERT INTO $table ($columns)
-      VALUES ($values)
-      RETURNING $returning
-    ''';
-
-    final result = await query(sql, parameters: data);
-    return result.isNotEmpty ? result.first : null;
+    Map<String, dynamic> data,
+  ) async {
+    final rows = await client.from(table).insert(data).select();
+    return rows.isNotEmpty ? rows.first : null;
   }
 
-  /// Execute update and return affected rows
+  /// UPDATE rows where every key in [match] equals its value.
   Future<List<Map<String, dynamic>>> update(
     String table,
     Map<String, dynamic> data, {
-    required String where,
-    Map<String, dynamic>? whereParams,
-    String returning = '*',
+    required Map<String, dynamic> match,
   }) async {
-    final setClause = data.keys.map((k) => '$k = @$k').join(', ');
-
-    final sql =
-        '''
-      UPDATE $table
-      SET $setClause, updated_at = NOW()
-      WHERE $where
-      RETURNING $returning
-    ''';
-
-    final params = {...data, ...?whereParams};
-    return await query(sql, parameters: params);
-  }
-
-  /// Execute soft delete (set is_active = false)
-  Future<bool> softDelete(
-    String table, {
-    required String where,
-    Map<String, dynamic>? whereParams,
-  }) async {
-    final sql =
-        '''
-      UPDATE $table
-      SET is_active = false, updated_at = NOW()
-      WHERE $where
-    ''';
-
-    await query(sql, parameters: whereParams);
-    return true;
-  }
-
-  /// Execute hard delete
-  Future<bool> delete(
-    String table, {
-    required String where,
-    Map<String, dynamic>? whereParams,
-  }) async {
-    final sql = 'DELETE FROM $table WHERE $where';
-    await query(sql, parameters: whereParams);
-    await query(sql, parameters: whereParams);
-    return true;
-  }
-
-  /// Execute a transaction
-  Future<T> transaction<T>(Future<T> Function(TxSession session) action) async {
-    if (!isConnected) {
-      await initialize();
+    var q = client.from(table).update(data);
+    for (final entry in match.entries) {
+      q = q.eq(entry.key, entry.value);
     }
-    return await _connection!.runTx(action);
+    return List<Map<String, dynamic>>.from(await q.select());
   }
 
-  /// Close connection
-  Future<void> close() async {
-    await _connection?.close();
-    _connection = null;
-    _isInitialized = false;
+  /// Soft-delete: sets `is_active = false`.
+  Future<void> softDelete(
+    String table, {
+    required Map<String, dynamic> match,
+  }) async {
+    await update(table, {'is_active': false}, match: match);
+  }
+
+  /// Hard DELETE.
+  Future<void> delete(
+    String table, {
+    required Map<String, dynamic> match,
+  }) async {
+    var q = client.from(table).delete();
+    for (final entry in match.entries) {
+      q = q.eq(entry.key, entry.value);
+    }
+    await q;
+  }
+
+  // ─── Dashboard helpers (called by HomeController) ────────────────────
+
+  Future<Map<String, dynamic>> getDashboardStats(String vendorId) async {
+    try {
+      final results = await Future.wait([
+        client
+            .from('products')
+            .select('id')
+            .eq('vendor_id', vendorId)
+            .eq('is_active', true),
+        client
+            .from('categories')
+            .select('id')
+            .eq('vendor_id', vendorId)
+            .eq('is_active', true),
+        client
+            .from('customers')
+            .select('id')
+            .eq('vendor_id', vendorId)
+            .eq('is_active', true),
+        client.from('sales').select('total_amount').eq('vendor_id', vendorId),
+        client
+            .from('purchases')
+            .select('total_amount')
+            .eq('vendor_id', vendorId),
+        client
+            .from('orders')
+            .select('id')
+            .eq('vendor_id', vendorId)
+            .eq('status', 'pending'),
+      ]);
+
+      final today = DateTime.now().toIso8601String().split('T')[0];
+
+      final todaySales = (results[3] as List).where((s) {
+        final d = (s['sale_date'] ?? '').toString();
+        return d.startsWith(today);
+      }).toList();
+
+      final todayPurchases = (results[4] as List).where((p) {
+        final d = (p['purchase_date'] ?? '').toString();
+        return d.startsWith(today);
+      }).toList();
+
+      double todayRevenue = todaySales.fold(
+        0.0,
+        (s, r) => s + (r['total_amount'] ?? 0),
+      );
+      double todayPurchaseAmt = todayPurchases.fold(
+        0.0,
+        (s, r) => s + (r['total_amount'] ?? 0),
+      );
+
+      return {
+        'product_count': (results[0] as List).length,
+        'category_count': (results[1] as List).length,
+        'customer_count': (results[2] as List).length,
+        'today_revenue': todayRevenue,
+        'today_sales_count': todaySales.length,
+        'today_purchase_amount': todayPurchaseAmt,
+        'today_purchase_count': todayPurchases.length,
+        'pending_orders': (results[5] as List).length,
+        'confirmed_orders': 0,
+        'out_of_stock': 0,
+        'low_stock': 0,
+      };
+    } catch (e) {
+      debugPrint('❌ getDashboardStats failed: $e');
+      return {};
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getWeeklySalesStats(
+    String vendorId,
+  ) async {
+    try {
+      final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 6));
+      final dateStr = sevenDaysAgo.toIso8601String().split('T')[0];
+
+      final rows = await client
+          .from('sales')
+          .select('sale_date, total_amount')
+          .eq('vendor_id', vendorId)
+          .gte('sale_date', dateStr)
+          .order('sale_date');
+
+      // Group by date
+      final Map<String, Map<String, dynamic>> grouped = {};
+      for (final row in rows) {
+        final date = row['sale_date'].toString();
+        grouped[date] ??= {'date': date, 'order_count': 0, 'revenue': 0.0};
+        grouped[date]!['order_count'] =
+            (grouped[date]!['order_count'] as int) + 1;
+        grouped[date]!['revenue'] =
+            (grouped[date]!['revenue'] as double) + (row['total_amount'] ?? 0);
+      }
+      return grouped.values.toList();
+    } catch (e) {
+      debugPrint('❌ getWeeklySalesStats failed: $e');
+      return [];
+    }
+  }
+
+  Future<void> clearVendorCache(String vendorId) async {
+    debugPrint('🗑️ Clearing cache for vendor: $vendorId');
   }
 }

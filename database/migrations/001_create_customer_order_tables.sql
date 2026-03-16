@@ -30,7 +30,12 @@ CREATE TABLE IF NOT EXISTS orders (
     order_date DATE NOT NULL,
     status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'delivered', 'cancelled')),
     total_amount DECIMAL(10, 2),
+    total_cost DECIMAL(10, 2),
     notes TEXT,
+    delivery_address TEXT,
+    payment_status VARCHAR(20) DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'partial', 'paid')),
+    paid_amount DECIMAL(10, 2) DEFAULT 0,
+    contact_phone VARCHAR(20),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -45,11 +50,14 @@ CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE TABLE IF NOT EXISTS order_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    product_id UUID REFERENCES products(id) ON DELETE SET NULL,
     quantity DECIMAL(10, 3) NOT NULL CHECK (quantity > 0),
     price_per_unit DECIMAL(10, 2),
+    cost_price DECIMAL(10, 2),
     total_price DECIMAL(10, 2),
     notes TEXT,
+    is_custom_item BOOLEAN DEFAULT false,
+    custom_item_name VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

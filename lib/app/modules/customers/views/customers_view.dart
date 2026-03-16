@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 import 'package:green_veg_stock_management/app/data/models/customer_order_models.dart';
 import 'package:green_veg_stock_management/app/modules/customers/controllers/customer_controller.dart';
+import 'package:green_veg_stock_management/app/data/repositories/order_repository.dart';
+import 'package:green_veg_stock_management/app/controllers/app_controller.dart';
 import 'package:green_veg_stock_management/app/theme/app_theme.dart';
 import 'package:green_veg_stock_management/app/widgets/common_widgets.dart';
 
@@ -58,7 +61,7 @@ class CustomersView extends GetView<CustomerController> {
               ),
             ),
             bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(80),
+              preferredSize: const Size.fromHeight(120),
               child: Container(
                 decoration: BoxDecoration(
                   color: AppTheme.backgroundLight,
@@ -217,7 +220,7 @@ class CustomersView extends GetView<CustomerController> {
               if (isSelectionMode) {
                 Get.back(result: customer);
               } else {
-                _showEditCustomerDialog(Get.context!, customer);
+                _showCustomerOrdersSheet(Get.context!, customer);
               }
             },
             borderRadius: BorderRadius.circular(16),
@@ -718,6 +721,191 @@ class CustomersView extends GetView<CustomerController> {
               foregroundColor: Colors.white,
             ),
             child: Text('delete'.tr),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCustomerOrdersSheet(BuildContext context, Customer customer) {
+    final orderRepository = OrderRepository();
+    
+    Get.bottomSheet(
+      Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: AppTheme.primaryGradient,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          customer.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${customer.type.getName(Get.locale?.languageCode ?? 'gu')} - ${customer.phone}',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Get.back(),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            // Orders list
+            Expanded(
+              child: FutureBuilder(
+                future: orderRepository.getOrdersByCustomer(customer.id),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  final orders = snapshot.data ?? [];
+                  if (orders.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.receipt_long, size: 64, color: Colors.grey[300]),
+                          const SizedBox(height: 16),
+                          Text(
+                            'no_orders_yet'.tr,
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: orders.length,
+                    itemBuilder: (context, index) {
+                      final order = orders[index];
+                      return _buildOrderCard(order);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  Widget _buildOrderCard(Order order) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                DateFormat('dd MMM yyyy').format(order.orderDate),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: order.status == OrderStatus.delivered 
+                    ? Colors.green[100] 
+                    : Colors.orange[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  order.status.value.tr,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: order.status == OrderStatus.delivered 
+                      ? Colors.green[700] 
+                      : Colors.orange[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Total',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '₹${order.totalAmount?.toStringAsFixed(0) ?? '0'}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+            ],
           ),
         ],
       ),

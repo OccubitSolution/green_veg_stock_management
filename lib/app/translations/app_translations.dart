@@ -2,6 +2,7 @@
 ///
 /// Bilingual support for Gujarati and English
 library;
+
 import 'package:get/get.dart';
 
 class AppTranslations extends Translations {
@@ -20,6 +21,7 @@ class AppTranslations extends Translations {
       'delete': 'કાઢી નાખો',
       'edit': 'સંપાદિત કરો',
       'add': 'ઉમેરો',
+      'copy': 'કૉપિ',
       'search': 'શોધો',
       'filter': 'ફિલ્ટર',
       'sort': 'ક્રમ',
@@ -141,7 +143,7 @@ class AppTranslations extends Translations {
       'pending': 'બાકી',
       'partial': 'આંશિક',
 
-// Customers & Suppliers
+      // Customers & Suppliers
       'customer': 'ગ્રાહક',
       'add_customer': 'ગ્રાહક ઉમેરો',
       'customer_name': 'ગ્રાહકનું નામ',
@@ -149,7 +151,8 @@ class AppTranslations extends Translations {
       'customers_registered': 'ગ્રાહકો નોંધાયેલ',
       'search_customers': 'ગ્રાહકો શોધો',
       'delete_customer': 'ગ્રાહક કાઢી નાખો',
-      'delete_customer_confirmation': 'શું તમે ખરેખર @name ને કાઢી નાખવા માંગો છો?',
+      'delete_customer_confirmation':
+          'શું તમે ખરેખર @name ને કાઢી નાખવા માંગો છો?',
       'customer_type': 'ગ્રાહકનો પ્રકાર',
       'enter_customer_name': 'ગ્રાહકનું નામ દાખલ કરો',
       'enter_contact_person': 'સંપર્ક વ્યક્તિનું નામ દાખલ કરો',
@@ -185,9 +188,11 @@ class AppTranslations extends Translations {
       'search_products': 'પ્રોડક્ટ્સ શોધો',
       'no_items_added': 'કોઈ આઇટમ ઉમેરેલ નથી',
       'search_and_add_products': 'પ્રોડક્ટ્સ શોધો અને ઉમેરો',
+      'set_daily_prices': 'દૈનિક ભાવ સેટ કરો',
       'add_to_order': 'ઓર્ડરમાં ઉમેરો',
       'save_order': 'ઓર્ડર સાચવો',
       'order_saved': 'ઓર્ડર સાચવેલ',
+      'order_updated': 'ઓર્ડર અપડેટ થયેલ',
       'failed_to_save_order': 'ઓર્ડર સાચવવામાં અસફળ',
       'order_deleted': 'ઓર્ડર કાઢી નાખાયો',
       'failed_to_delete_order': 'ઓર્ડર કાઢવામાં અસફળ',
@@ -196,8 +201,16 @@ class AppTranslations extends Translations {
       'optional_notes': 'વૈકલ્પિક નોંધો',
       'all': 'બધા',
       'purchase_list': 'ખરીદી યાદી',
+      'purchase_list_subtitle': 'બધા ગ્રાહકોના ઓર્ડરમાંથી એકત્રિત માત્રા',
       'total_items': 'કુલ આઇટમ્સ',
       'total_customers': 'કુલ ગ્રાહકો',
+      'no_orders_yet': 'હજુ સુધી કોઈ ઓર્ડર નથી',
+      'add_orders_to_generate': 'ખરીદી યાદી બનાવવા ગ્રાહક ઓર્ડર ઉમેરો',
+      'add_orders': 'ઓર્ડર ઉમેરો',
+      'customer_breakdown': 'ગ્રાહક વિગત:',
+      'copied': 'કૉપિ થયું!',
+      'purchase_list_copied': 'ખરીદી યાદી ક્લિપબોર્ડ પર કૉપિ થઈ ગઈ',
+      'share_list': 'યાદી શેર કરો',
 
       // Stock
       'current_stock': 'હાલનો સ્ટોક',
@@ -247,8 +260,20 @@ class AppTranslations extends Translations {
       'passwords_not_match': 'પાસવર્ડ મેળ ખાતા નથી',
       'invalid_phone': 'અમાન્ય ફોન નંબર',
       'invalid_number': 'અમાન્ય નંબર',
+      'invalid_invite_code': 'અમાન્ય ઈન્વાઈટ કોડ',
 
-// Messages
+      // Invite System
+      'invite_code': 'ઈન્વાઈટ કોડ',
+      'invite_code_hint': 'એડમિન પાસેથી ઈન્વાઈટ કોડ દાખલ કરો',
+      'generate_invite_code': 'ઈન્વાઈટ કોડ જનરેટ કરો',
+      'share_invite_code': 'ઈન્વાઈટ કોડ શેર કરો',
+      'invite_staff': 'સ્ટાફ આમંત્રો',
+      'invite_staff_desc': 'આ કોડ સ્ટાફ સભ્યો સાથે શેર કરો',
+      'staff_registered': 'સ્ટાફ સભ્ય સફળતાપૂર્વક નોંધાયો',
+      'view_invited_orders': 'આમંત્રિત એડમિન ઓર્ડર જુઓ',
+      'admin_invited_by': 'એડમિન',
+
+      // Messages
       'no_data': 'કોઈ ડેટા નથી',
       'no_products': 'કોઈ પ્રોડક્ટ નથી',
       'no_products_found': 'કોઈ પ્રોડક્ટ મળ્યા નથી',
@@ -261,20 +286,81 @@ class AppTranslations extends Translations {
       'deleted_successfully': 'સફળતાપૂર્વક કાઢી નખાયેલ',
       'something_went_wrong': 'કંઈક ખોટું થયું',
       'check_connection': 'કૃપા કરીને ઇન્ટરનેટ કનેક્શન તપાસો',
-      
+
       // Reports
       'prices_set_today': 'આજના ભાવ સેટ',
       'product_performance': 'પ્રોડક્ટ પ્રદર્શન',
       'not_set': 'સેટ નથી',
-      
+
       // Dashboard Stats
       'today_purchases': 'આજની ખરીદી',
       'today_sales': 'આજું વેચાણ',
       'pending_orders': 'બાકી ઓર્ડર',
-      
+
       // Daily Prices
       'yesterday': 'ગઈકાલ',
       'yesterday_price': 'ગઈકાલનો ભાવ',
+      'save_prices': 'ભાવ સાચવો',
+      'copy_yesterday_prices': 'ગઈકાલના ભાવ કોપી કરો',
+
+      // Splash & Auth UI
+      'stock_management': 'સ્ટોક મેનેજમેન્ટ',
+      'welcome_back': 'ફરી આપનું સ્વાગત છે',
+      'sign_in_to_continue': 'ચાલુ રાખવા લોગિન કરો',
+      'enter_name': 'નામ દાખલ કરો',
+      'enter_password': 'પાસવર્ડ દાખલ કરો',
+      'setup_pin': 'PIN સેટ કરો',
+      'coming_soon': 'ટૂંક સમયમાં',
+      'go_back': 'પાછા જાઓ',
+      'no_orders_found': 'કોઈ ઓર્ડર મળ્યા નથી',
+
+      // Home View
+      'today_overview': 'આજની ઝાટકણી',
+      'quick_stats': 'ઝડપી આંકડા',
+      'amount': 'રકમ',
+      'view_all': 'બધું જુઓ',
+      'see_all': 'બધું જુઓ',
+      'set_prices': 'ભાવ સેટ કરો',
+      'new_order': 'નવો ઓર્ડર',
+      'prices_updated': 'ભાવ અપડેટ થયા',
+      'customer_added': 'ગ્રાહક ઉમેરાયો',
+      'today': 'આજે',
+      '2_days_ago': '2 દિવસ પહેલા',
+
+      // Settings (extended)
+      'select_language': 'ભાષા પસંદ કરો',
+      'security': 'સુરક્ષા',
+      'pin_lock': 'PIN લોક',
+
+      // Orders (extended)
+      'enter_quantity': 'જથ્થો દાખલ કરો',
+
+      // Auth (extended)
+      'user_session_expired': 'સત્ર સમાપ્ત થયું',
+
+      // Reports
+      'last_7_days': 'છેલ્લા 7 દિવસ',
+      'last_30_days': 'છેલ્લા 30 દિવસ',
+      'last_90_days': 'છેલ્લા 90 દિવસ',
+      'no_data_available': 'કોઈ ડેટા ઉપલબ્ધ નથી',
+      'top_products': 'ટોપ પ્રોડક્ટ્સ',
+      'no_products_available': 'કોઈ પ્રોડક્ટ ઉપલબ્ધ નથી',
+      'price_updates': 'ભાવ અપડેટ્સ',
+
+      // Product Form (additional keys)
+      'product_name_gujarati': 'પ્રોડક્ટનું નામ (ગુજરાતી)',
+      'product_name_english': 'પ્રોડક્ટનું નામ (અંગ્રેજી)',
+      'enter_product_name': 'પ્રોડક્ટનું નામ દાખલ કરો',
+      'enter_product_name_english': 'અંગ્રેજીમાં નામ દાખલ કરો (વૈકલ્પિક)',
+      'enter_max_price': 'મહત્તમ ભાવ દાખલ કરો (વૈકલ્પિક)',
+      'product_image': 'પ્રોડક્ટની છબી',
+      'product_will_be_visible': 'પ્રોડક્ટ ગ્રાહકોને દેખાશે',
+      'must_be_positive': 'મૂલ્ય હકારાત્મક હોવું જોઈએ',
+      'product_added_successfully': 'પ્રોડક્ટ સફળતાપૂર્વક ઉમેરાઈ',
+      'product_updated_successfully': 'પ્રોડક્ટ સફળતાપૂર્વક અપડેટ થઈ',
+      'failed_to_save_product': 'પ્રોડક્ટ સાચવવામાં નિષ્ફળ',
+      'failed_to_load_data': 'ડેટા લોડ કરવામાં નિષ્ફળ',
+      'failed_to_pick_image': 'છબી પસંદ કરવામાં નિષ્ફળ',
     },
 
     // English
@@ -290,6 +376,7 @@ class AppTranslations extends Translations {
       'delete': 'Delete',
       'edit': 'Edit',
       'add': 'Add',
+      'copy': 'Copy',
       'search': 'Search',
       'filter': 'Filter',
       'sort': 'Sort',
@@ -411,7 +498,7 @@ class AppTranslations extends Translations {
       'pending': 'Pending',
       'partial': 'Partial',
 
-// Customers & Suppliers
+      // Customers & Suppliers
       'customer': 'Customer',
       'add_customer': 'Add Customer',
       'customer_name': 'Customer Name',
@@ -455,9 +542,11 @@ class AppTranslations extends Translations {
       'search_products': 'Search products',
       'no_items_added': 'No Items Added',
       'search_and_add_products': 'Search and add products',
+      'set_daily_prices': 'Set Daily Prices',
       'add_to_order': 'Add to Order',
       'save_order': 'Save Order',
       'order_saved': 'Order saved successfully',
+      'order_updated': 'Order updated successfully',
       'failed_to_save_order': 'Failed to save order',
       'order_deleted': 'Order deleted',
       'failed_to_delete_order': 'Failed to delete order',
@@ -466,8 +555,16 @@ class AppTranslations extends Translations {
       'optional_notes': 'Optional notes',
       'all': 'All',
       'purchase_list': 'Purchase List',
+      'purchase_list_subtitle': 'Aggregated quantities from all customer orders',
       'total_items': 'Total Items',
       'total_customers': 'Total Customers',
+      'no_orders_yet': 'No Orders Yet',
+      'add_orders_to_generate': 'Add customer orders to generate purchase list',
+      'add_orders': 'Add Orders',
+      'customer_breakdown': 'Customer Breakdown:',
+      'copied': 'Copied!',
+      'purchase_list_copied': 'Purchase list copied to clipboard',
+      'share_list': 'Share List',
 
       // Stock
       'current_stock': 'Current Stock',
@@ -517,8 +614,20 @@ class AppTranslations extends Translations {
       'passwords_not_match': 'Passwords do not match',
       'invalid_phone': 'Invalid phone number',
       'invalid_number': 'Invalid number',
+      'invalid_invite_code': 'Invalid invite code',
 
-// Messages
+      // Invite System
+      'invite_code': 'Invite Code',
+      'invite_code_hint': 'Enter invite code from admin',
+      'generate_invite_code': 'Generate Invite Code',
+      'share_invite_code': 'Share Invite Code',
+      'invite_staff': 'Invite Staff',
+      'invite_staff_desc': 'Share this code with staff members',
+      'staff_registered': 'Staff member registered successfully',
+      'view_invited_orders': 'View Invited Admin Orders',
+      'admin_invited_by': 'Admin',
+
+      // Messages
       'no_data': 'No data',
       'no_products': 'No products',
       'no_products_found': 'No products found',
@@ -531,20 +640,81 @@ class AppTranslations extends Translations {
       'deleted_successfully': 'Deleted successfully',
       'something_went_wrong': 'Something went wrong',
       'check_connection': 'Please check internet connection',
-      
+
       // Reports
       'prices_set_today': 'Prices Set Today',
       'product_performance': 'Product Performance',
       'not_set': 'Not Set',
-      
+
       // Dashboard Stats
       'today_purchases': "Today's Purchases",
       'today_sales': "Today's Sales",
       'pending_orders': 'Pending Orders',
-      
+
       // Daily Prices
       'yesterday': 'Yesterday',
       'yesterday_price': "Yesterday's Price",
+      'save_prices': 'Save Prices',
+      'copy_yesterday_prices': "Copy Yesterday's Prices",
+
+      // Splash & Auth UI
+      'stock_management': 'Stock Management',
+      'welcome_back': 'Welcome Back',
+      'sign_in_to_continue': 'Sign in to continue',
+      'enter_password': 'Enter password',
+      'enter_name': 'Enter your name',
+      'setup_pin': 'Set Up PIN',
+      'coming_soon': 'Coming Soon',
+      'go_back': 'Go Back',
+      'no_orders_found': 'No orders found',
+
+      // Home View
+      'today_overview': "Today's Overview",
+      'quick_stats': 'Quick Stats',
+      'amount': 'Amount',
+      'view_all': 'View All',
+      'see_all': 'See All',
+      'set_prices': 'Set Prices',
+      'new_order': 'New Order',
+      'prices_updated': 'Prices Updated',
+      'customer_added': 'Customer Added',
+      'today': 'Today',
+      '2_days_ago': '2 days ago',
+
+      // Settings (extended)
+      'select_language': 'Select Language',
+      'security': 'Security',
+      'pin_lock': 'PIN Lock',
+
+      // Orders (extended)
+      'enter_quantity': 'Enter quantity',
+
+      // Auth (extended)
+      'user_session_expired': 'Session expired',
+
+      // Reports
+      'last_7_days': 'Last 7 Days',
+      'last_30_days': 'Last 30 Days',
+      'last_90_days': 'Last 90 Days',
+      'no_data_available': 'No data available',
+      'top_products': 'Top Products',
+      'no_products_available': 'No products available',
+      'price_updates': 'price updates',
+
+      // Product Form (additional keys)
+      'product_name_gujarati': 'Product Name (Gujarati)',
+      'product_name_english': 'Product Name (English)',
+      'enter_product_name': 'Enter product name',
+      'enter_product_name_english': 'Enter product name in English (optional)',
+      'enter_max_price': 'Enter maximum price (optional)',
+      'product_image': 'Product Image',
+      'product_will_be_visible': 'Product will be visible to customers',
+      'must_be_positive': 'Value must be positive',
+      'product_added_successfully': 'Product added successfully',
+      'product_updated_successfully': 'Product updated successfully',
+      'failed_to_save_product': 'Failed to save product',
+      'failed_to_load_data': 'Failed to load data',
+      'failed_to_pick_image': 'Failed to pick image',
     },
   };
 }

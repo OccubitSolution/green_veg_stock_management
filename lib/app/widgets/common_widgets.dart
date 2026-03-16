@@ -1,4 +1,4 @@
-﻿/// Premium Widgets - Modern UI Components
+/// Premium Widgets - Modern UI Components
 ///
 /// Glassmorphism effects, animated counters, premium cards,
 /// and other modern UI elements for a stunning user experience.
@@ -407,6 +407,194 @@ class ModernSearchBar extends StatelessWidget {
 }
 
 // ============================================================================
+// ENHANCED PRODUCT SEARCH SECTION - Better UX for Order Entry
+// ============================================================================
+
+class ProductSearchSection extends StatelessWidget {
+  final TextEditingController? controller;
+  final String? hintText;
+  final ValueChanged<String>? onChanged;
+  final VoidCallback? onClear;
+  final String? title;
+  final String? subtitle;
+
+  const ProductSearchSection({
+    super.key,
+    this.controller,
+    this.hintText,
+    this.onChanged,
+    this.onClear,
+    this.title,
+    this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingLG),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white, AppTheme.surfaceLight.withValues(alpha: 0.5)],
+        ),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXL),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.12),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with icon
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.shopping_basket_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: AppTheme.spacingMD),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title ?? 'search_and_add_products'.tr,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimaryLight,
+                        fontSize: 16,
+                      ),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondaryLight,
+                          fontSize: 13,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spacingLG),
+          // Large, prominent search bar
+          Container(
+            height: 56,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(
+                color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                width: 2,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppTheme.radiusLG - 2),
+              child: TextField(
+                controller: controller,
+                onChanged: onChanged,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: InputDecoration(
+                  hintText: hintText ?? 'search_products'.tr,
+                  hintStyle: TextStyle(
+                    color: AppTheme.textTertiaryLight,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  prefixIcon: Container(
+                    margin: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primarySurface,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+                    ),
+                    child: const Icon(
+                      Icons.search_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 22,
+                    ),
+                  ),
+                  suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: controller ?? TextEditingController(),
+                    builder: (context, value, child) {
+                      if (value.text.isEmpty) return const SizedBox.shrink();
+                      return IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.textTertiaryLight.withValues(
+                              alpha: 0.15,
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: AppTheme.textSecondaryLight,
+                            size: 16,
+                          ),
+                        ),
+                        onPressed: () {
+                          controller?.clear();
+                          onClear?.call();
+                        },
+                      );
+                    },
+                  ),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.spacingMD,
+                    vertical: AppTheme.spacingMD,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
 // SECTION HEADER - Modern Section Title
 // ============================================================================
 
@@ -701,8 +889,8 @@ class PriceInputCard extends StatelessWidget {
     }
 
     return PremiumCard(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.all(12),
       child: Row(
         children: [
           // Icon
@@ -760,9 +948,12 @@ class PriceInputCard extends StatelessWidget {
                 width: 100,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppTheme.backgroundLight,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-                  border: Border.all(color: iconColor.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: iconColor.withValues(alpha: 0.3),
+                    width: 1.5,
+                  ),
                 ),
                 child: TextField(
                   controller: priceController,
@@ -780,7 +971,10 @@ class PriceInputCard extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       color: iconColor,
                     ),
+                    filled: false,
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 10,
@@ -1069,33 +1263,38 @@ class GradientButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.radiusLG),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-            child: isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation(Colors.white),
-                    ),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (icon != null) ...[
-                        Icon(icon, color: Colors.white, size: 20),
-                        const SizedBox(width: 8),
-                      ],
-                      Text(
-                        label,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
+            child: SizedBox(
+              height: 20,
+              child: isLoading
+                  ? const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
                         ),
                       ),
-                    ],
-                  ),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (icon != null) ...[
+                          Icon(icon, color: Colors.white, size: 20),
+                          const SizedBox(width: 8),
+                        ],
+                        Text(
+                          label,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
           ),
         ),
       ),

@@ -1,264 +1,221 @@
+import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:green_veg_stock_management/app/data/models/phase2_models.dart';
 import 'package:green_veg_stock_management/app/data/providers/database_provider.dart';
 
-/// Purchase Repository
-/// Handles all database operations for purchases
+/// Purchase Repository – purchases and stock-in via Supabase REST.
 class PurchaseRepository {
   final DatabaseProvider _db = DatabaseProvider.instance;
+  SupabaseClient get _client => _db.client;
 
-  /// Get purchases by date range
+  /// Purchases for a vendor, optionally filtered by date range.
   Future<List<Purchase>> getPurchases(
     String vendorId, {
     DateTime? startDate,
     DateTime? endDate,
     int limit = 100,
   }) async {
-    final conn = await _db.connection;
+    try {
+      // Build all filters BEFORE order/limit (Supabase requires this)
+      var q = _client.from('purchases').select().eq('vendor_id', vendorId);
 
-    String query = '''
-      SELECT * FROM purchases 
-      WHERE vendor_id = @vendorId
-    ''';
+      if (startDate != null) {
+        q = q.gte('purchase_date', startDate.toIso8601String().split('T')[0]);
+      }
+      if (endDate != null) {
+        q = q.lte('purchase_date', endDate.toIso8601String().split('T')[0]);
+      }
 
-    final Map<String, Object> params = {'vendorId': vendorId};
-
-    if (startDate != null) {
-      query += ' AND purchase_date >= @startDate';
-      params['startDate'] = startDate.toIso8601String().split('T')[0];
+      final rows = await q
+          .order('purchase_date', ascending: false)
+          .limit(limit);
+      return rows
+          .map((r) => Purchase.fromJson(r as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ getPurchases failed: $e');
+      return [];
     }
-
-    if (endDate != null) {
-      query += ' AND purchase_date <= @endDate';
-      params['endDate'] = endDate.toIso8601String().split('T')[0];
-    }
-
-    query += ' ORDER BY purchase_date DESC, created_at DESC LIMIT @limit';
-    params['limit'] = limit;
-
-    final result = await conn.execute(query, parameters: params);
-    return result.map((row) => Purchase.fromJson(row.toColumnMap())).toList();
   }
 
-  /// Get purchase by ID with items
+  /// Single purchase by ID.
   Future<Purchase?> getPurchaseById(String purchaseId) async {
-    final conn = await _db.connection;
-
-    final result = await conn.execute(
-      'SELECT * FROM purchases WHERE id = @purchaseId',
-      parameters: {'purchaseId': purchaseId},
-    );
-
-    if (result.isEmpty) return null;
-    return Purchase.fromJson(result.first.toColumnMap());
+    try {
+      final rows = await _client
+          .from('purchases')
+          .select()
+          .eq('id', purchaseId)
+          .limit(1);
+      if (rows.isEmpty) return null;
+      return Purchase.fromJson(rows.first as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('❌ getPurchaseById failed: $e');
+      return null;
+    }
   }
 
-  /// Get purchase items
+  /// Line items for a purchase.
   Future<List<PurchaseItem>> getPurchaseItems(String purchaseId) async {
-    final conn = await _db.connection;
-
-    final result = await conn.execute(
-      '''
-      SELECT 
-        pi.*,
-        p.name_gu as product_name_gu,
-        p.name_en as product_name_en,
-        u.symbol as unit_symbol
-      FROM purchase_items pi
-      JOIN products p ON pi.product_id = p.id
-      JOIN units u ON p.unit_id = u.id
-      WHERE pi.purchase_id = @purchaseId
-      ORDER BY p.name_en
-    ''',
-      parameters: {'purchaseId': purchaseId},
-    );
-
-    return result
-        .map((row) => PurchaseItem.fromJson(row.toColumnMap()))
-        .toList();
+    try {
+      final rows = await _client
+          .from('purchase_items')
+          .select('*, products(name_gu, name_en, units(symbol))')
+          .eq('purchase_id', purchaseId);
+      return rows.map((r) {
+        final flat = _flattenItem(r as Map<String, dynamic>);
+        return PurchaseItem.fromJson(flat);
+      }).toList();
+    } catch (e) {
+      debugPrint('❌ getPurchaseItems failed: $e');
+      return [];
+    }
   }
 
-  /// Create purchase with items
+  /// Create purchase + items + update stock.
   Future<Purchase> createPurchase(
     Purchase purchase,
     List<PurchaseItem> items,
   ) async {
-    final conn = await _db.connection;
+    // Insert purchase
+    final purchaseRows = await _client.from('purchases').insert({
+      'vendor_id': purchase.vendorId,
+      'supplier_name': purchase.supplierName,
+      'purchase_date': purchase.purchaseDate.toIso8601String().split('T')[0],
+      'total_amount': purchase.totalAmount,
+      'notes': purchase.notes,
+    }).select();
 
-    return await conn.runTx((tx) async {
-      // Insert purchase
-      final purchaseResult = await tx.execute(
-        '''
-        INSERT INTO purchases (
-          vendor_id, supplier_name, purchase_date, total_amount, notes
-        ) VALUES (
-          @vendorId, @supplierName, @purchaseDate, @totalAmount, @notes
-        )
-        RETURNING *
-      ''',
-        parameters: {
-          'vendorId': purchase.vendorId,
-          'supplierName': purchase.supplierName,
-          'purchaseDate': purchase.purchaseDate.toIso8601String().split('T')[0],
-          'totalAmount': purchase.totalAmount,
-          'notes': purchase.notes,
-        },
-      );
+    final newPurchase = Purchase.fromJson(
+      purchaseRows.first as Map<String, dynamic>,
+    );
 
-      final newPurchase = Purchase.fromJson(purchaseResult.first.toColumnMap());
+    // Insert items
+    for (final item in items) {
+      await _client.from('purchase_items').insert({
+        'purchase_id': newPurchase.id,
+        'product_id': item.productId,
+        'quantity': item.quantity,
+        'price_per_unit': item.pricePerUnit,
+        'total_price': item.totalPrice,
+        'notes': item.notes,
+      });
 
-      // Insert items and update stock
-      for (final item in items) {
-        await tx.execute(
-          '''
-          INSERT INTO purchase_items (
-            purchase_id, product_id, quantity, price_per_unit, total_price, notes
-          ) VALUES (
-            @purchaseId, @productId, @quantity, @pricePerUnit, @totalPrice, @notes
-          )
-        ''',
-          parameters: {
-            'purchaseId': newPurchase.id,
-            'productId': item.productId,
-            'quantity': item.quantity,
-            'pricePerUnit': item.pricePerUnit,
-            'totalPrice': item.totalPrice,
-            'notes': item.notes,
-          },
-        );
+      // Update stock
+      await _increaseStock(purchase.vendorId, item.productId, item.quantity);
+    }
 
-        // Update stock
-        await _updateStock(
-          tx,
-          purchase.vendorId,
-          item.productId,
-          item.quantity,
-        );
-      }
-
-      return newPurchase;
-    });
+    return newPurchase;
   }
 
-  /// Update stock after purchase
-  Future<void> _updateStock(
-    dynamic tx,
+  Future<void> _increaseStock(
     String vendorId,
     String productId,
     double quantity,
   ) async {
-    // Check if stock exists
-    final existing = await tx.execute(
-      '''
-      SELECT id FROM stock 
-      WHERE vendor_id = @vendorId AND product_id = @productId
-    ''',
-      parameters: {'vendorId': vendorId, 'productId': productId},
-    );
+    final existing = await _client
+        .from('stock')
+        .select('id, quantity')
+        .eq('vendor_id', vendorId)
+        .eq('product_id', productId);
 
     if (existing.isEmpty) {
-      // Create new stock entry
-      await tx.execute(
-        '''
-        INSERT INTO stock (vendor_id, product_id, quantity)
-        VALUES (@vendorId, @productId, @quantity)
-      ''',
-        parameters: {
-          'vendorId': vendorId,
-          'productId': productId,
-          'quantity': quantity,
-        },
-      );
+      final inserted = await _client
+          .from('stock')
+          .insert({
+            'vendor_id': vendorId,
+            'product_id': productId,
+            'quantity': quantity,
+          })
+          .select('id');
+
+      await _client.from('stock_movements').insert({
+        'stock_id': inserted.first['id'],
+        'movement_type': 'purchase',
+        'quantity': quantity,
+        'reference_type': 'purchase',
+        'notes': 'Purchase received',
+      });
     } else {
-      // Update existing stock
-      await tx.execute(
-        '''
-        UPDATE stock 
-        SET quantity = quantity + @quantity,
-            last_updated = CURRENT_TIMESTAMP
-        WHERE vendor_id = @vendorId AND product_id = @productId
-      ''',
-        parameters: {
-          'vendorId': vendorId,
-          'productId': productId,
-          'quantity': quantity,
-        },
-      );
+      final stockId = existing.first['id'].toString();
+      final current = double.parse(existing.first['quantity'].toString());
+      await _client
+          .from('stock')
+          .update({
+            'quantity': current + quantity,
+            'last_updated': DateTime.now().toIso8601String(),
+          })
+          .eq('id', stockId);
+
+      await _client.from('stock_movements').insert({
+        'stock_id': stockId,
+        'movement_type': 'purchase',
+        'quantity': quantity,
+        'reference_type': 'purchase',
+        'notes': 'Purchase received',
+      });
     }
-
-    // Record stock movement
-    final stockId = existing.isEmpty
-        ? (await tx.execute(
-            'SELECT id FROM stock WHERE vendor_id = @vendorId AND product_id = @productId',
-            parameters: {'vendorId': vendorId, 'productId': productId},
-          )).first[0]
-        : existing.first[0];
-
-    await tx.execute(
-      '''
-      INSERT INTO stock_movements (stock_id, movement_type, quantity, reference_type, notes)
-      VALUES (@stockId, 'purchase', @quantity, 'purchase', 'Purchase received')
-    ''',
-      parameters: {'stockId': stockId, 'quantity': quantity},
-    );
   }
 
-  /// Delete purchase (and reverse stock)
+  /// Delete purchase and reverse stock.
   Future<void> deletePurchase(String purchaseId) async {
-    final conn = await _db.connection;
+    try {
+      final items = await _client
+          .from('purchase_items')
+          .select('product_id, quantity')
+          .eq('purchase_id', purchaseId);
 
-    await conn.runTx((tx) async {
-      // Get purchase items to reverse stock
-      final items = await tx.execute(
-        'SELECT product_id, quantity FROM purchase_items WHERE purchase_id = @purchaseId',
-        parameters: {'purchaseId': purchaseId},
-      );
-
-      // Reverse stock for each item
-      for (final row in items) {
-        final productId = row[0] as String;
-        final quantity = double.parse(row[1].toString());
-
-        await tx.execute(
-          '''
-          UPDATE stock 
-          SET quantity = quantity - @quantity
-          WHERE product_id = @productId
-        ''',
-          parameters: {'productId': productId, 'quantity': quantity},
-        );
+      for (final item in items) {
+        final existing = await _client
+            .from('stock')
+            .select('id, quantity')
+            .eq('product_id', item['product_id']);
+        if (existing.isNotEmpty) {
+          final current = double.parse(existing.first['quantity'].toString());
+          await _client
+              .from('stock')
+              .update({'quantity': current - (item['quantity'] ?? 0)})
+              .eq('id', existing.first['id']);
+        }
       }
 
-      // Delete purchase (cascade will delete items)
-      await tx.execute(
-        'DELETE FROM purchases WHERE id = @purchaseId',
-        parameters: {'purchaseId': purchaseId},
-      );
-    });
+      await _client.from('purchases').delete().eq('id', purchaseId);
+    } catch (e) {
+      debugPrint('❌ deletePurchase failed: $e');
+    }
   }
 
-  /// Get purchase stats
+  /// Purchase stats for a given date.
   Future<Map<String, dynamic>> getPurchaseStats(
     String vendorId,
     DateTime date,
   ) async {
-    final conn = await _db.connection;
-    final dateStr = date.toIso8601String().split('T')[0];
+    try {
+      final dateStr = date.toIso8601String().split('T')[0];
+      final rows = await _client
+          .from('purchases')
+          .select('total_amount')
+          .eq('vendor_id', vendorId)
+          .eq('purchase_date', dateStr);
+      final list = rows;
+      final total = list.fold<double>(
+        0,
+        (s, r) => s + (r['total_amount'] ?? 0),
+      );
+      return {'totalPurchases': list.length, 'totalAmount': total};
+    } catch (e) {
+      debugPrint('❌ getPurchaseStats failed: $e');
+      return {'totalPurchases': 0, 'totalAmount': 0.0};
+    }
+  }
 
-    final result = await conn.execute(
-      '''
-      SELECT 
-        COUNT(*) as total_purchases,
-        COALESCE(SUM(total_amount), 0) as total_amount
-      FROM purchases
-      WHERE vendor_id = @vendorId AND purchase_date = @dateStr
-    ''',
-      parameters: {'vendorId': vendorId, 'dateStr': dateStr},
-    );
-
-    final row = result.first.toColumnMap();
+  Map<String, dynamic> _flattenItem(Map<String, dynamic> r) {
+    final product = r['products'] as Map<String, dynamic>? ?? {};
+    final unit = product['units'] as Map<String, dynamic>? ?? {};
     return {
-      'totalPurchases': int.parse(row['total_purchases'].toString()),
-      'totalAmount': double.parse(row['total_amount'].toString()),
+      ...r,
+      'product_name_gu': product['name_gu'],
+      'product_name_en': product['name_en'],
+      'unit_symbol': unit['symbol'],
     };
   }
 }

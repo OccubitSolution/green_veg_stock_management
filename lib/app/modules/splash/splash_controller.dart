@@ -23,18 +23,12 @@ class SplashController extends GetxController {
       await Future.delayed(const Duration(seconds: 2));
 
       final isLoggedIn = _storage.read('is_logged_in') ?? false;
-      final pinEnabled = _storage.read('pin_enabled') ?? false;
 
-      debugPrint('📊 isLoggedIn: $isLoggedIn, pinEnabled: $pinEnabled');
+      debugPrint('📊 isLoggedIn: $isLoggedIn');
 
       if (isLoggedIn) {
-        if (pinEnabled) {
-          debugPrint('🔐 Navigating to PIN Lock...');
-          Get.offAllNamed(AppRoutes.pinLock);
-        } else {
-          debugPrint('🏠 Navigating to Dashboard...');
-          Get.offAllNamed(AppRoutes.dashboard);
-        }
+        debugPrint('🏠 Navigating to Dashboard...');
+        Get.offAllNamed(AppRoutes.dashboard);
       } else {
         debugPrint('🔑 Navigating to Login...');
         Get.offAllNamed(AppRoutes.login);

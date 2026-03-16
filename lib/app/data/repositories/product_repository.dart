@@ -1,111 +1,99 @@
 /// Product Repository
 ///
-/// Handles product CRUD operations
+/// Handles product and category CRUD via Supabase REST.
 library;
 
 import 'package:flutter/foundation.dart' hide Category;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/database_provider.dart';
 import '../models/product_model.dart';
 import '../models/models.dart';
 
 class ProductRepository {
   final _db = DatabaseProvider.instance;
+  SupabaseClient get _client => _db.client;
 
-  /// Get all products for a vendor
   Future<List<Product>> getProducts(
     String vendorId, {
     String? search,
     String? categoryId,
     bool activeOnly = true,
+    bool forceRefresh = false,
   }) async {
     try {
-      String whereClause = 'p.vendor_id = @vendor_id';
-      final params = <String, dynamic>{'vendor_id': vendorId};
+      // All filters MUST come before .order() in Supabase Flutter
+      var q = _client
+          .from('products')
+          .select('*, categories(name_gu), units(name_en, symbol)')
+          .eq('vendor_id', vendorId);
 
-      if (activeOnly) {
-        whereClause += ' AND p.is_active = true';
-      }
+      if (activeOnly) q = q.eq('is_active', true);
+      if (categoryId != null) q = q.eq('category_id', categoryId);
 
-      if (categoryId != null) {
-        whereClause += ' AND p.category_id = @category_id';
-        params['category_id'] = categoryId;
-      }
+      final rows = await q.order('sort_order');
+      var products = rows.map((r) {
+        final cat = r['categories'] as Map<String, dynamic>? ?? {};
+        final unit = r['units'] as Map<String, dynamic>? ?? {};
+        return Product.fromJson({
+          ...r,
+          'category_name': cat['name_gu'],
+          'unit_name': unit['name_en'],
+          'unit_symbol': unit['symbol'],
+        });
+      }).toList();
 
+      // Client-side search filter
       if (search != null && search.isNotEmpty) {
-        whereClause +=
-            ' AND (p.name_gu ILIKE @search OR p.name_en ILIKE @search)';
-        params['search'] = '%$search%';
+        final s = search.toLowerCase();
+        products = products
+            .where(
+              (p) =>
+                  p.nameGu.toLowerCase().contains(s) ||
+                  (p.nameEn?.toLowerCase().contains(s) ?? false),
+            )
+            .toList();
       }
 
-      final result = await _db.query('''
-        SELECT 
-          p.*,
-          c.name_gu as category_name,
-          u.name_gu as unit_name,
-          u.symbol as unit_symbol,
-          dp.price as current_price
-        FROM products p
-        LEFT JOIN categories c ON p.category_id = c.id
-        LEFT JOIN units u ON p.unit_id = u.id
-        LEFT JOIN daily_prices dp ON p.id = dp.product_id 
-          AND dp.price_date = CURRENT_DATE
-        WHERE $whereClause
-        ORDER BY p.sort_order, p.name_gu
-      ''', parameters: params);
-
-      return result.map((json) => Product.fromJson(json)).toList();
+      return products;
     } catch (e) {
-      debugPrint('❌ Get products failed: $e');
+      debugPrint('❌ getProducts failed: $e');
       rethrow;
     }
   }
 
-  /// Get single product
   Future<Product?> getProduct(String productId) async {
     try {
-      final result = await _db.query(
-        '''
-        SELECT 
-          p.*,
-          c.name_gu as category_name,
-          u.name_gu as unit_name,
-          u.symbol as unit_symbol,
-          dp.price as current_price
-        FROM products p
-        LEFT JOIN categories c ON p.category_id = c.id
-        LEFT JOIN units u ON p.unit_id = u.id
-        LEFT JOIN daily_prices dp ON p.id = dp.product_id 
-          AND dp.price_date = CURRENT_DATE
-        WHERE p.id = @id
-      ''',
-        parameters: {'id': productId},
-      );
-
-      if (result.isNotEmpty) {
-        return Product.fromJson(result.first);
-      }
-      return null;
+      final rows = await _client
+          .from('products')
+          .select('*, categories(name_gu), units(name_en, symbol)')
+          .eq('id', productId)
+          .limit(1);
+      if ((rows).isEmpty) return null;
+      final r = rows.first as Map<String, dynamic>;
+      final cat = r['categories'] as Map<String, dynamic>? ?? {};
+      final unit = r['units'] as Map<String, dynamic>? ?? {};
+      return Product.fromJson({
+        ...r,
+        'category_name': cat['name_gu'],
+        'unit_name': unit['name_en'],
+        'unit_symbol': unit['symbol'],
+      });
     } catch (e) {
-      debugPrint('❌ Get product failed: $e');
+      debugPrint('❌ getProduct failed: $e');
       return null;
     }
   }
 
-  /// Create product
   Future<Product?> createProduct(Product product) async {
     try {
       final result = await _db.insert('products', product.toJson());
-      if (result != null) {
-        return Product.fromJson(result);
-      }
-      return null;
+      return result != null ? Product.fromJson(result) : null;
     } catch (e) {
-      debugPrint('❌ Create product failed: $e');
+      debugPrint('❌ createProduct failed: $e');
       rethrow;
     }
   }
 
-  /// Update product
   Future<Product?> updateProduct(
     String productId,
     Map<String, dynamic> data,
@@ -114,74 +102,63 @@ class ProductRepository {
       final result = await _db.update(
         'products',
         data,
-        where: 'id = @id',
-        whereParams: {'id': productId},
+        match: {'id': productId},
       );
-
-      if (result.isNotEmpty) {
-        return Product.fromJson(result.first);
-      }
-      return null;
+      return result.isNotEmpty ? Product.fromJson(result.first) : null;
     } catch (e) {
-      debugPrint('❌ Update product failed: $e');
+      debugPrint('❌ updateProduct failed: $e');
       rethrow;
     }
   }
 
-  /// Soft delete product
   Future<bool> deleteProduct(String productId) async {
     try {
-      return await _db.softDelete(
-        'products',
-        where: 'id = @id',
-        whereParams: {'id': productId},
-      );
+      await _db.softDelete('products', match: {'id': productId});
+      return true;
     } catch (e) {
-      debugPrint('❌ Delete product failed: $e');
+      debugPrint('❌ deleteProduct failed: $e');
       return false;
     }
   }
 
-  /// Get all units
   Future<List<ProductUnit>> getUnits() async {
     try {
-      final result = await _db.query('SELECT * FROM units ORDER BY name_gu');
-      return result.map((json) => ProductUnit.fromJson(json)).toList();
+      final rows = await _client.from('units').select().order('name_gu');
+      return rows
+          .map((r) => ProductUnit.fromJson(r as Map<String, dynamic>))
+          .toList();
     } catch (e) {
-      debugPrint('❌ Get units failed: $e');
+      debugPrint('❌ getUnits failed: $e');
       return [];
     }
   }
 
-  /// Get categories for vendor
-  Future<List<Category>> getCategories(String vendorId) async {
+  Future<List<Category>> getCategories(
+    String vendorId, {
+    bool forceRefresh = false,
+  }) async {
     try {
-      final result = await _db.query(
-        '''
-        SELECT * FROM categories 
-        WHERE vendor_id = @vendor_id AND is_active = true
-        ORDER BY sort_order, name_gu
-      ''',
-        parameters: {'vendor_id': vendorId},
-      );
-
-      return result.map((json) => Category.fromJson(json)).toList();
+      final rows = await _client
+          .from('categories')
+          .select()
+          .eq('vendor_id', vendorId)
+          .eq('is_active', true)
+          .order('sort_order');
+      return rows
+          .map((r) => Category.fromJson(r as Map<String, dynamic>))
+          .toList();
     } catch (e) {
-      debugPrint('❌ Get categories failed: $e');
+      debugPrint('❌ getCategories failed: $e');
       return [];
     }
   }
 
-  /// Create category
   Future<Category?> createCategory(Category category) async {
     try {
       final result = await _db.insert('categories', category.toJson());
-      if (result != null) {
-        return Category.fromJson(result);
-      }
-      return null;
+      return result != null ? Category.fromJson(result) : null;
     } catch (e) {
-      debugPrint('❌ Create category failed: $e');
+      debugPrint('❌ createCategory failed: $e');
       rethrow;
     }
   }

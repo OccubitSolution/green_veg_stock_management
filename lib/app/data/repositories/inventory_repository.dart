@@ -1,252 +1,204 @@
+import 'package:flutter/foundation.dart';
 import 'package:green_veg_stock_management/app/data/models/phase2_models.dart';
 import 'package:green_veg_stock_management/app/data/providers/database_provider.dart';
 
-/// Inventory Repository
-/// Handles stock management and tracking
+/// Inventory Repository – stock management and tracking via Supabase REST.
 class InventoryRepository {
   final DatabaseProvider _db = DatabaseProvider.instance;
 
-  /// Get current stock for vendor
+  /// All stock rows for a vendor, enriched with product + unit names.
   Future<List<Stock>> getStock(String vendorId) async {
-    final conn = await _db.connection;
-
-    final result = await conn.execute(
-      '''
-      SELECT 
-        s.*,
-        p.name_gu as product_name_gu,
-        p.name_en as product_name_en,
-        u.symbol as unit_symbol,
-        CASE 
-          WHEN s.quantity <= 0 THEN 'out_of_stock'
-          WHEN s.quantity <= s.min_stock_level THEN 'low_stock'
-          ELSE 'in_stock'
-        END as stock_status
-      FROM stock s
-      JOIN products p ON s.product_id = p.id
-      JOIN units u ON p.unit_id = u.id
-      WHERE s.vendor_id = @vendorId
-      ORDER BY 
-        CASE 
-          WHEN s.quantity <= 0 THEN 0
-          WHEN s.quantity <= s.min_stock_level THEN 1
-          ELSE 2
-        END,
-        p.name_en
-    ''',
-      parameters: {'vendorId': vendorId},
-    );
-
-    return result.map((row) => Stock.fromJson(row.toColumnMap())).toList();
+    try {
+      final rows = await _db.client
+          .from('stock')
+          .select('*, products(name_gu, name_en, units(symbol))')
+          .eq('vendor_id', vendorId);
+      return rows.map((r) => Stock.fromJson(_flattenStock(r))).toList();
+    } catch (e) {
+      debugPrint('❌ getStock failed: $e');
+      return [];
+    }
   }
 
-  /// Get low stock items
+  /// Stock rows where quantity <= min_stock_level.
   Future<List<Stock>> getLowStock(String vendorId) async {
-    final conn = await _db.connection;
-
-    final result = await conn.execute(
-      '''
-      SELECT 
-        s.*,
-        p.name_gu as product_name_gu,
-        p.name_en as product_name_en,
-        u.symbol as unit_symbol,
-        'low_stock' as stock_status
-      FROM stock s
-      JOIN products p ON s.product_id = p.id
-      JOIN units u ON p.unit_id = u.id
-      WHERE s.vendor_id = @vendorId
-      AND s.quantity <= s.min_stock_level
-      AND s.quantity > 0
-      ORDER BY s.quantity ASC
-    ''',
-      parameters: {'vendorId': vendorId},
-    );
-
-    return result.map((row) => Stock.fromJson(row.toColumnMap())).toList();
+    try {
+      final rows = await _db.client
+          .from('stock')
+          .select('*, products(name_gu, name_en, units(symbol))')
+          .eq('vendor_id', vendorId)
+          .gt('quantity', 0);
+      // Filter client-side because PostgREST can't compare two columns easily
+      final lowRows = rows
+          .where((r) => (r['quantity'] ?? 0) <= (r['min_stock_level'] ?? 0))
+          .toList();
+      return lowRows.map((r) => Stock.fromJson(_flattenStock(r))).toList();
+    } catch (e) {
+      debugPrint('❌ getLowStock failed: $e');
+      return [];
+    }
   }
 
-  /// Get out of stock items
+  /// Stock rows where quantity <= 0.
   Future<List<Stock>> getOutOfStock(String vendorId) async {
-    final conn = await _db.connection;
-
-    final result = await conn.execute(
-      '''
-      SELECT 
-        s.*,
-        p.name_gu as product_name_gu,
-        p.name_en as product_name_en,
-        u.symbol as unit_symbol,
-        'out_of_stock' as stock_status
-      FROM stock s
-      JOIN products p ON s.product_id = p.id
-      JOIN units u ON p.unit_id = u.id
-      WHERE s.vendor_id = @vendorId
-      AND s.quantity <= 0
-      ORDER BY p.name_en
-    ''',
-      parameters: {'vendorId': vendorId},
-    );
-
-    return result.map((row) => Stock.fromJson(row.toColumnMap())).toList();
+    try {
+      final rows = await _db.client
+          .from('stock')
+          .select('*, products(name_gu, name_en, units(symbol))')
+          .eq('vendor_id', vendorId)
+          .lte('quantity', 0);
+      return rows.map((r) => Stock.fromJson(_flattenStock(r))).toList();
+    } catch (e) {
+      debugPrint('❌ getOutOfStock failed: $e');
+      return [];
+    }
   }
 
-  /// Get stock movement history
+  /// Most-recent stock movements for a given stock record.
   Future<List<StockMovement>> getStockMovements(
     String stockId, {
     int limit = 50,
   }) async {
-    final conn = await _db.connection;
-
-    final result = await conn.execute(
-      '''
-      SELECT * FROM stock_movements
-      WHERE stock_id = @stockId
-      ORDER BY created_at DESC
-      LIMIT @limit
-    ''',
-      parameters: {'stockId': stockId, 'limit': limit},
-    );
-
-    return result
-        .map((row) => StockMovement.fromJson(row.toColumnMap()))
-        .toList();
+    try {
+      final rows = await _db.client
+          .from('stock_movements')
+          .select()
+          .eq('stock_id', stockId)
+          .order('created_at', ascending: false)
+          .limit(limit);
+      return rows
+          .map((r) => StockMovement.fromJson(r as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ getStockMovements failed: $e');
+      return [];
+    }
   }
 
-  /// Update stock quantity (for adjustments)
+  /// Set stock to [newQuantity] (creates entry if missing) and records movement.
   Future<void> adjustStock(
     String vendorId,
     String productId,
     double newQuantity,
     String reason,
   ) async {
-    final conn = await _db.connection;
-
-    await conn.runTx((tx) async {
-      // Get or create stock
-      final existing = await tx.execute(
-        '''
-        SELECT id, quantity FROM stock 
-        WHERE vendor_id = @vendorId AND product_id = @productId
-      ''',
-        parameters: {'vendorId': vendorId, 'productId': productId},
-      );
+    try {
+      final existing = await _db.client
+          .from('stock')
+          .select('id, quantity')
+          .eq('vendor_id', vendorId)
+          .eq('product_id', productId);
 
       String stockId;
-      double oldQuantity;
+      double oldQuantity = 0;
 
       if (existing.isEmpty) {
-        // Create new stock entry
-        final result = await tx.execute(
-          '''
-          INSERT INTO stock (vendor_id, product_id, quantity)
-          VALUES (@vendorId, @productId, @quantity)
-          RETURNING id
-        ''',
-          parameters: {
-            'vendorId': vendorId,
-            'productId': productId,
-            'quantity': newQuantity,
-          },
-        );
-        stockId = result.first[0] as String;
-        oldQuantity = 0;
+        final inserted = await _db.client
+            .from('stock')
+            .insert({
+              'vendor_id': vendorId,
+              'product_id': productId,
+              'quantity': newQuantity,
+            })
+            .select('id');
+        stockId = inserted.first['id'].toString();
       } else {
-        stockId = existing.first[0] as String;
-        oldQuantity = double.parse(existing.first[1].toString());
-
-        // Update stock
-        await tx.execute(
-          '''
-          UPDATE stock 
-          SET quantity = @quantity,
-              last_updated = CURRENT_TIMESTAMP
-          WHERE id = @stockId
-        ''',
-          parameters: {'stockId': stockId, 'quantity': newQuantity},
-        );
+        stockId = existing.first['id'].toString();
+        oldQuantity = double.parse(existing.first['quantity'].toString());
+        await _db.client
+            .from('stock')
+            .update({
+              'quantity': newQuantity,
+              'last_updated': DateTime.now().toIso8601String(),
+            })
+            .eq('id', stockId);
       }
 
-      // Record movement
-      final difference = newQuantity - oldQuantity;
-      await tx.execute(
-        '''
-        INSERT INTO stock_movements (
-          stock_id, movement_type, quantity, reference_type, notes
-        ) VALUES (
-          @stockId, 'adjustment', @quantity, 'adjustment', @notes
-        )
-      ''',
-        parameters: {
-          'stockId': stockId,
-          'quantity': difference,
-          'notes': reason,
-        },
-      );
-    });
+      await _db.client.from('stock_movements').insert({
+        'stock_id': stockId,
+        'movement_type': 'adjustment',
+        'quantity': newQuantity - oldQuantity,
+        'reference_type': 'adjustment',
+        'notes': reason,
+      });
+    } catch (e) {
+      debugPrint('❌ adjustStock failed: $e');
+    }
   }
 
-  /// Record waste/damage
+  /// Reduce stock and record a "waste" movement.
   Future<void> recordWaste(
     String stockId,
     double quantity,
     String reason,
   ) async {
-    final conn = await _db.connection;
-
-    await conn.runTx((tx) async {
-      // Reduce stock
-      await tx.execute(
-        '''
-        UPDATE stock 
-        SET quantity = quantity - @quantity,
-            last_updated = CURRENT_TIMESTAMP
-        WHERE id = @stockId
-      ''',
-        parameters: {'stockId': stockId, 'quantity': quantity},
-      );
-
-      // Record movement
-      await tx.execute(
-        '''
-        INSERT INTO stock_movements (
-          stock_id, movement_type, quantity, reference_type, notes
-        ) VALUES (
-          @stockId, 'waste', @quantity, 'waste', @notes
-        )
-      ''',
-        parameters: {
-          'stockId': stockId,
-          'quantity': -quantity,
-          'notes': reason,
-        },
-      );
-    });
+    try {
+      final existing = await _db.client
+          .from('stock')
+          .select('quantity')
+          .eq('id', stockId);
+      if (existing.isEmpty) return;
+      final current = double.parse(existing.first['quantity'].toString());
+      await _db.client
+          .from('stock')
+          .update({
+            'quantity': current - quantity,
+            'last_updated': DateTime.now().toIso8601String(),
+          })
+          .eq('id', stockId);
+      await _db.client.from('stock_movements').insert({
+        'stock_id': stockId,
+        'movement_type': 'waste',
+        'quantity': -quantity,
+        'reference_type': 'waste',
+        'notes': reason,
+      });
+    } catch (e) {
+      debugPrint('❌ recordWaste failed: $e');
+    }
   }
 
-  /// Get inventory stats
+  /// Aggregate inventory stats for the vendor.
   Future<Map<String, dynamic>> getInventoryStats(String vendorId) async {
-    final conn = await _db.connection;
+    try {
+      final rows = await _db.client
+          .from('stock')
+          .select('quantity, min_stock_level')
+          .eq('vendor_id', vendorId);
+      final list = rows;
+      int outOfStock = 0, lowStock = 0, inStock = 0;
+      for (final r in list) {
+        final qty = (r['quantity'] ?? 0) as num;
+        final min = (r['min_stock_level'] ?? 0) as num;
+        if (qty <= 0) {
+          outOfStock++;
+        } else if (qty <= min) {
+          lowStock++;
+        } else {
+          inStock++;
+        }
+      }
+      return {
+        'totalProducts': list.length,
+        'outOfStock': outOfStock,
+        'lowStock': lowStock,
+        'inStock': inStock,
+      };
+    } catch (e) {
+      debugPrint('❌ getInventoryStats failed: $e');
+      return {};
+    }
+  }
 
-    final result = await conn.execute(
-      '''
-      SELECT 
-        COUNT(*) as total_products,
-        COUNT(CASE WHEN quantity <= 0 THEN 1 END) as out_of_stock,
-        COUNT(CASE WHEN quantity <= min_stock_level AND quantity > 0 THEN 1 END) as low_stock,
-        COUNT(CASE WHEN quantity > min_stock_level THEN 1 END) as in_stock
-      FROM stock
-      WHERE vendor_id = @vendorId
-    ''',
-      parameters: {'vendorId': vendorId},
-    );
-
-    final row = result.first.toColumnMap();
+  // Flatten nested Supabase join result into a flat map expected by Stock.fromJson
+  Map<String, dynamic> _flattenStock(Map<String, dynamic> r) {
+    final product = r['products'] as Map<String, dynamic>? ?? {};
+    final unit = product['units'] as Map<String, dynamic>? ?? {};
     return {
-      'totalProducts': int.parse(row['total_products'].toString()),
-      'outOfStock': int.parse(row['out_of_stock'].toString()),
-      'lowStock': int.parse(row['low_stock'].toString()),
-      'inStock': int.parse(row['in_stock'].toString()),
+      ...r,
+      'product_name_gu': product['name_gu'],
+      'product_name_en': product['name_en'],
+      'unit_symbol': unit['symbol'],
     };
   }
 }

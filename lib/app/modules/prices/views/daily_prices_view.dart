@@ -14,22 +14,82 @@ class DailyPricesView extends GetView<DailyPricesController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
+      resizeToAvoidBottomInset: false,
       body: Column(
         children: [
           // Header with Date Selector
           _buildHeader(context),
 
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spacingMD,
-              vertical: AppTheme.spacingSM,
+          // Compact Search Bar
+          Container(
+            margin: const EdgeInsets.fromLTRB(
+              AppTheme.spacingMD,
+              AppTheme.spacingXS,
+              AppTheme.spacingMD,
+              AppTheme.spacingXS,
             ),
-            child: ModernSearchBar(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.spacingSM,
+              vertical: AppTheme.spacingXS,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+              border: Border.all(
+                color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                width: 1.5,
+              ),
+            ),
+            child: TextField(
               controller: controller.searchController,
-              hintText: 'search_products'.tr,
               onChanged: controller.searchProducts,
-              onClear: controller.clearSearch,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              decoration: InputDecoration(
+                hintText: 'search_products'.tr,
+                hintStyle: TextStyle(
+                  color: AppTheme.textTertiaryLight,
+                  fontSize: 14,
+                ),
+                filled: false,
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: AppTheme.primaryColor,
+                  size: 20,
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 36,
+                  minHeight: 36,
+                ),
+                suffixIcon: Obx(() {
+                  if (controller.searchQuery.value.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return IconButton(
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: AppTheme.textSecondaryLight,
+                      size: 18,
+                    ),
+                    onPressed: controller.clearSearch,
+                  );
+                }),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                ),
+              ),
             ),
           ).animate().fadeIn(delay: 200.ms),
 
@@ -48,9 +108,11 @@ class DailyPricesView extends GetView<DailyPricesController> {
               }
 
               return ListView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppTheme.spacingMD,
-                  vertical: AppTheme.spacingSM,
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.spacingMD,
+                  AppTheme.spacingXS,
+                  AppTheme.spacingMD,
+                  100, // Space for bottom nav bar
                 ),
                 physics: const BouncingScrollPhysics(),
                 itemCount: controller.filteredProducts.length,
@@ -64,16 +126,6 @@ class DailyPricesView extends GetView<DailyPricesController> {
             }),
           ),
         ],
-      ),
-      floatingActionButton: Obx(
-        () => controller.prices.isNotEmpty
-            ? GradientButton(
-                label: 'save_prices'.tr,
-                icon: Icons.save_rounded,
-                onPressed: controller.savePrices,
-                isLoading: controller.isLoading.value,
-              ).animate().fadeIn().slideY(begin: 0.5)
-            : const SizedBox.shrink(),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
@@ -124,22 +176,58 @@ class DailyPricesView extends GetView<DailyPricesController> {
                   ),
                 ],
               ),
-              // Copy Prices Button
-              IconButton(
-                onPressed: controller.copyPreviousDayPrices,
-                icon: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+              // Copy + Save Buttons
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: controller.copyPreviousDayPrices,
+                    icon: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                      ),
+                      child: const Icon(
+                        Icons.content_copy_rounded,
+                        color: AppTheme.primaryColor,
+                        size: 20,
+                      ),
+                    ),
+                    tooltip: 'copy_yesterday_prices'.tr,
                   ),
-                  child: const Icon(
-                    Icons.content_copy_rounded,
-                    color: AppTheme.primaryColor,
-                    size: 20,
-                  ),
-                ),
-                tooltip: 'copy_yesterday_prices'.tr,
+                  Obx(() => controller.hasChanges.value
+                      ? TextButton.icon(
+                          onPressed: controller.isLoading.value
+                              ? null
+                              : controller.savePrices,
+                          icon: controller.isLoading.value
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.save_rounded, size: 18, color: Colors.white),
+                          label: Text(
+                            'save_prices'.tr,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink()),
+                ],
               ),
             ],
           ).animate().fadeIn().slideY(begin: -0.3),
@@ -173,7 +261,7 @@ class DailyPricesView extends GetView<DailyPricesController> {
     final delayMs = (index * 50).clamp(0, 500);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppTheme.spacingSM),
+      padding: const EdgeInsets.only(bottom: AppTheme.spacingXS),
       child:
           PriceInputCard(
                 name: product.getName(lang),

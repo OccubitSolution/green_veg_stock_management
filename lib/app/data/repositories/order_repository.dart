@@ -1,260 +1,309 @@
+import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:green_veg_stock_management/app/data/models/customer_order_models.dart';
 import 'package:green_veg_stock_management/app/data/providers/database_provider.dart';
-import 'package:postgres/postgres.dart';
 
-/// Order Repository
-/// Handles all database operations for orders and order items
+/// Order Repository – all database operations for orders via Supabase REST.
 class OrderRepository {
   final DatabaseProvider _db = DatabaseProvider.instance;
+  SupabaseClient get _client => _db.client;
 
-  /// Get orders for a specific date
   Future<List<Order>> getOrdersByDate(String vendorId, DateTime date) async {
-    final dateStr = date.toIso8601String().split('T')[0];
-    final result = await _db.query(
-      '''
-      SELECT 
-        o.*,
-        c.name as customer_name,
-        c.type as customer_type
-      FROM orders o
-      JOIN customers c ON o.customer_id = c.id
-      WHERE o.vendor_id = @vendorId 
-      AND o.order_date = @dateStr
-      ORDER BY c.name ASC
-    ''',
-      parameters: {'vendorId': vendorId, 'dateStr': dateStr},
-    );
-
-    return result.map((row) => Order.fromJson(row)).toList();
+    try {
+      final dateStr = date.toIso8601String().split('T')[0];
+      final rows = await _client
+          .from('orders')
+          .select('*, customers(name, type)')
+          .eq('vendor_id', vendorId)
+          .eq('order_date', dateStr)
+          .order('order_date');
+      return rows
+          .map((r) => Order.fromJson(_flattenOrder(r as Map<String, dynamic>)))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ getOrdersByDate failed: $e');
+      return [];
+    }
   }
 
-  /// Get orders by customer
   Future<List<Order>> getOrdersByCustomer(
     String customerId, {
     int limit = 50,
   }) async {
-    final result = await _db.query(
-      '''
-      SELECT 
-        o.*,
-        c.name as customer_name,
-        c.type as customer_type
-      FROM orders o
-      JOIN customers c ON o.customer_id = c.id
-      WHERE o.customer_id = @customerId
-      ORDER BY o.order_date DESC
-      LIMIT @limit
-    ''',
-      parameters: {'customerId': customerId, 'limit': limit},
-    );
-
-    return result.map((row) => Order.fromJson(row)).toList();
+    try {
+      final rows = await _client
+          .from('orders')
+          .select('*, customers(name, type)')
+          .eq('customer_id', customerId)
+          .order('order_date', ascending: false)
+          .limit(limit);
+      return rows
+          .map((r) => Order.fromJson(_flattenOrder(r as Map<String, dynamic>)))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ getOrdersByCustomer failed: $e');
+      return [];
+    }
   }
 
-  /// Get order by ID with items
   Future<Order?> getOrderById(String orderId) async {
-    final result = await _db.query(
-      '''
-      SELECT 
-        o.*,
-        c.name as customer_name,
-        c.type as customer_type
-      FROM orders o
-      JOIN customers c ON o.customer_id = c.id
-      WHERE o.id = @orderId
-    ''',
-      parameters: {'orderId': orderId},
-    );
-
-    if (result.isEmpty) return null;
-    return Order.fromJson(result.first);
+    try {
+      final rows = await _client
+          .from('orders')
+          .select('*, customers(name, type)')
+          .eq('id', orderId)
+          .limit(1);
+      if (rows.isEmpty) return null;
+      return Order.fromJson(_flattenOrder(rows.first as Map<String, dynamic>));
+    } catch (e) {
+      debugPrint('❌ getOrderById failed: $e');
+      return null;
+    }
   }
 
-  /// Get order items for an order
   Future<List<OrderItem>> getOrderItems(String orderId) async {
-    final result = await _db.query(
-      '''
-      SELECT 
-        oi.*,
-        p.name_gu as product_name_gu,
-        p.name_en as product_name_en,
-        u.symbol as unit_symbol,
-        cat.name_en as category_name
-      FROM order_items oi
-      JOIN products p ON oi.product_id = p.id
-      JOIN units u ON p.unit_id = u.id
-      JOIN categories cat ON p.category_id = cat.id
-      WHERE oi.order_id = @orderId
-      ORDER BY cat.sort_order, p.name_en
-    ''',
-      parameters: {'orderId': orderId},
-    );
-
-    return result.map((row) => OrderItem.fromJson(row)).toList();
+    try {
+      final rows = await _client
+          .from('order_items')
+          .select(
+            '*, products(name_gu, name_en, units(symbol), categories(name_en))',
+          )
+          .eq('order_id', orderId);
+      return rows.map((r) {
+        final product = r['products'] as Map<String, dynamic>? ?? {};
+        final unit = product['units'] as Map<String, dynamic>? ?? {};
+        final cat = product['categories'] as Map<String, dynamic>? ?? {};
+        return OrderItem.fromJson({
+          ...r,
+          'product_name_gu': product['name_gu'],
+          'product_name_en': product['name_en'],
+          'unit_symbol': unit['symbol'],
+          'category_name': cat['name_en'],
+        });
+      }).toList();
+    } catch (e) {
+      debugPrint('❌ getOrderItems failed: $e');
+      return [];
+    }
   }
 
-  /// Create new order with items
   Future<Order> createOrder(Order order, List<OrderItem> items) async {
-    return await _db.transaction((tx) async {
-      // Insert order
-      final orderResult = await tx.execute(
-        Sql.named('''
-        INSERT INTO orders (
-          customer_id, vendor_id, order_date, status, notes
-        ) VALUES (
-          @customerId, @vendorId, @orderDate, @status, @notes
-        )
-        RETURNING *
-      '''),
-        parameters: {
-          'customerId': order.customerId,
-          'vendorId': order.vendorId,
-          'orderDate': order.orderDate.toIso8601String().split('T')[0],
+    final orderRows = await _client.from('orders').insert({
+      'customer_id': order.customerId,
+      'vendor_id': order.vendorId,
+      'order_date': order.orderDate.toIso8601String().split('T')[0],
+      'status': order.status.value,
+      'notes': order.notes,
+    }).select();
+    final newOrder = Order.fromJson(orderRows.first as Map<String, dynamic>);
+
+    for (final item in items) {
+      await _client.from('order_items').insert({
+        'order_id': newOrder.id,
+        'product_id': item.productId,
+        'quantity': item.quantity,
+        'price_per_unit': item.pricePerUnit,
+        'notes': item.notes,
+      });
+    }
+    return newOrder;
+  }
+
+  Future<Order> updateOrder(
+    String orderId,
+    Order order,
+    List<OrderItem> items,
+  ) async {
+    final orderRows = await _client
+        .from('orders')
+        .update({
+          'customer_id': order.customerId,
+          'order_date': order.orderDate.toIso8601String().split('T')[0],
           'status': order.status.value,
           'notes': order.notes,
-        },
-      );
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', orderId)
+        .select();
+    if (orderRows.isEmpty) throw Exception('Order not found');
+    final updatedOrder = Order.fromJson(
+      orderRows.first as Map<String, dynamic>,
+    );
 
-      final newOrder = Order.fromJson(orderResult.first.toColumnMap());
-
-      // Insert order items
-      for (final item in items) {
-        await tx.execute(
-          Sql.named('''
-          INSERT INTO order_items (
-            order_id, product_id, quantity, price_per_unit, notes
-          ) VALUES (
-            @orderId, @productId, @quantity, @pricePerUnit, @notes
-          )
-        '''),
-          parameters: {
-            'orderId': newOrder.id,
-            'productId': item.productId,
-            'quantity': item.quantity,
-            'pricePerUnit': item.pricePerUnit,
-            'notes': item.notes,
-          },
-        );
-      }
-
-      return newOrder;
-    });
+    // Replace items
+    await _client.from('order_items').delete().eq('order_id', orderId);
+    for (final item in items) {
+      await _client.from('order_items').insert({
+        'order_id': orderId,
+        'product_id': item.productId,
+        'quantity': item.quantity,
+        'price_per_unit': item.pricePerUnit,
+        'notes': item.notes,
+      });
+    }
+    return updatedOrder;
   }
 
-  /// Update order status
   Future<void> updateOrderStatus(String orderId, OrderStatus status) async {
     await _db.update(
       'orders',
       {'status': status.value},
-      where: 'id = @orderId',
-      whereParams: {'orderId': orderId},
+      match: {'id': orderId},
     );
   }
 
-  /// Delete order and its items
   Future<void> deleteOrder(String orderId) async {
-    await _db.transaction((tx) async {
-      await tx.execute(
-        Sql.named('DELETE FROM order_items WHERE order_id = @orderId'),
-        parameters: {'orderId': orderId},
-      );
-      await tx.execute(
-        Sql.named('DELETE FROM orders WHERE id = @orderId'),
-        parameters: {'orderId': orderId},
-      );
-    });
+    await _client.from('order_items').delete().eq('order_id', orderId);
+    await _client.from('orders').delete().eq('id', orderId);
   }
 
-  /// Get aggregated order items for a date
-  /// This is the KEY function for generating purchase list
+  /// Aggregated order items for a date (purchase list view).
   Future<List<AggregatedOrderItem>> getAggregatedOrders(
     String vendorId,
-    DateTime date,
-  ) async {
-    final dateStr = date.toIso8601String().split('T')[0];
-    final result = await _db.query(
-      '''
-      SELECT 
-        p.id as product_id,
-        p.name_gu as product_name_gu,
-        p.name_en as product_name_en,
-        u.symbol as unit_symbol,
-        cat.name_en as category_name,
-        SUM(oi.quantity) as total_quantity,
-        COUNT(DISTINCT o.id) as order_count,
-        json_agg(json_build_object(
-          'order_id', o.id,
-          'customer_name', c.name,
-          'quantity', oi.quantity,
-          'notes', oi.notes
-        )) as item_details
-      FROM orders o
-      JOIN order_items oi ON o.id = oi.order_id
-      JOIN products p ON oi.product_id = p.id
-      JOIN units u ON p.unit_id = u.id
-      JOIN categories cat ON p.category_id = cat.id
-      JOIN customers c ON o.customer_id = c.id
-      WHERE o.vendor_id = @vendorId 
-      AND o.order_date = @dateStr
-      AND o.status != 'cancelled'
-      GROUP BY p.id, p.name_gu, p.name_en, u.symbol, cat.name_en
-      ORDER BY cat.sort_order, p.name_en
-    ''',
-      parameters: {'vendorId': vendorId, 'dateStr': dateStr},
-    );
+    DateTime date, {
+    String? inviterVendorId,
+  }) async {
+    try {
+      final dateStr = date.toIso8601String().split('T')[0];
+      final effectiveVendorId = inviterVendorId ?? vendorId;
 
-    return result.map((row) {
-      final json = row;
-      final details = (json['item_details'] as List<dynamic>)
-          .map(
-            (d) => OrderItemDetail(
-              orderId: d['order_id'],
-              customerName: d['customer_name'],
-              quantity: double.parse(d['quantity'].toString()),
-              notes: d['notes'],
-            ),
+      // Get orders for the date
+      final orders = await _client
+          .from('orders')
+          .select('id, customer_id, customers(name)')
+          .eq('vendor_id', effectiveVendorId)
+          .eq('order_date', dateStr)
+          .neq('status', 'cancelled');
+
+      if ((orders as List).isEmpty) return [];
+
+      final orderIds = orders.map((o) => o['id'].toString()).toList();
+
+      final items = await _client
+          .from('order_items')
+          .select(
+            '*, products(id, name_gu, name_en, units(symbol), categories(name_en, sort_order))',
           )
-          .toList();
+          .inFilter('order_id', orderIds);
 
-      return AggregatedOrderItem(
-        productId: json['product_id'],
-        productNameGu: json['product_name_gu'],
-        productNameEn: json['product_name_en'],
-        unitSymbol: json['unit_symbol'],
-        categoryName: json['category_name'],
-        totalQuantity: double.parse(json['total_quantity'].toString()),
-        orderCount: int.parse(json['order_count'].toString()),
-        itemDetails: details,
-      );
-    }).toList();
+      // Build customer map
+      final customerMap = <String, String>{};
+      for (final o in orders) {
+        final name = (o['customers'] as Map?)?['name']?.toString() ?? '';
+        customerMap[o['id'].toString()] = name;
+      }
+
+      // Aggregate by product
+      final Map<String, Map<String, dynamic>> agg = {};
+      for (final item in (items as List)) {
+        final product = item['products'] as Map<String, dynamic>? ?? {};
+        final pid = product['id']?.toString() ?? '';
+        if (!agg.containsKey(pid)) {
+          final unit = product['units'] as Map<String, dynamic>? ?? {};
+          final cat = product['categories'] as Map<String, dynamic>? ?? {};
+          agg[pid] = {
+            'product_id': pid,
+            'product_name_gu': product['name_gu'],
+            'product_name_en': product['name_en'],
+            'unit_symbol': unit['symbol'],
+            'category_name': cat['name_en'],
+            'category_sort': cat['sort_order'] ?? 0,
+            'total_quantity': 0.0,
+            'order_count': 0,
+            'item_details': <OrderItemDetail>[],
+          };
+        }
+        agg[pid]!['total_quantity'] =
+            (agg[pid]!['total_quantity'] as double) + (item['quantity'] ?? 0);
+        agg[pid]!['order_count'] = (agg[pid]!['order_count'] as int) + 1;
+        (agg[pid]!['item_details'] as List<OrderItemDetail>).add(
+          OrderItemDetail(
+            orderId: item['order_id']?.toString() ?? '',
+            customerName: customerMap[item['order_id']?.toString()] ?? '',
+            quantity: double.tryParse(item['quantity']?.toString() ?? '0') ?? 0,
+            notes: item['notes'],
+          ),
+        );
+      }
+
+      final result = agg.values.map((json) {
+        return AggregatedOrderItem(
+          productId: json['product_id'],
+          productNameGu: json['product_name_gu'],
+          productNameEn: json['product_name_en'],
+          unitSymbol: json['unit_symbol'],
+          categoryName: json['category_name'],
+          totalQuantity: json['total_quantity'],
+          orderCount: json['order_count'],
+          itemDetails: json['item_details'],
+        );
+      }).toList();
+
+      result.sort((a, b) {
+        final catA = agg[a.productId]!['category_sort'] as int;
+        final catB = agg[b.productId]!['category_sort'] as int;
+        if (catA != catB) return catA.compareTo(catB);
+        return (a.productNameEn ?? '').compareTo(b.productNameEn ?? '');
+      });
+      return result;
+    } catch (e) {
+      debugPrint('❌ getAggregatedOrders failed: $e');
+      return [];
+    }
   }
 
-  /// Get order statistics for a date
   Future<Map<String, dynamic>> getOrderStats(
     String vendorId,
-    DateTime date,
-  ) async {
-    final dateStr = date.toIso8601String().split('T')[0];
-    final result = await _db.query(
-      '''
-      SELECT 
-        COUNT(DISTINCT o.id) as total_orders,
-        COUNT(DISTINCT o.customer_id) as total_customers,
-        SUM(oi.quantity) as total_items
-      FROM orders o
-      JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.vendor_id = @vendorId 
-      AND o.order_date = @dateStr
-      AND o.status != 'cancelled'
-    ''',
-      parameters: {'vendorId': vendorId, 'dateStr': dateStr},
-    );
+    DateTime date, {
+    String? inviterVendorId,
+  }) async {
+    try {
+      final dateStr = date.toIso8601String().split('T')[0];
+      final effectiveVendorId = inviterVendorId ?? vendorId;
 
-    final row = result.first;
+      final orders = await _client
+          .from('orders')
+          .select('id, customer_id')
+          .eq('vendor_id', effectiveVendorId)
+          .eq('order_date', dateStr)
+          .neq('status', 'cancelled');
+
+      if ((orders as List).isEmpty) {
+        return {'totalOrders': 0, 'totalCustomers': 0, 'totalItems': 0.0};
+      }
+
+      final orderIds = orders.map((o) => o['id'].toString()).toList();
+      final items = await _client
+          .from('order_items')
+          .select('quantity')
+          .inFilter('order_id', orderIds);
+
+      final totalItems = (items as List).fold<double>(
+        0,
+        (s, i) => s + (i['quantity'] ?? 0),
+      );
+      final distinctCustomers = orders
+          .map((o) => o['customer_id'].toString())
+          .toSet()
+          .length;
+
+      return {
+        'totalOrders': orders.length,
+        'totalCustomers': distinctCustomers,
+        'totalItems': totalItems,
+      };
+    } catch (e) {
+      debugPrint('❌ getOrderStats failed: $e');
+      return {'totalOrders': 0, 'totalCustomers': 0, 'totalItems': 0.0};
+    }
+  }
+
+  Map<String, dynamic> _flattenOrder(Map<String, dynamic> r) {
+    final customer = r['customers'] as Map<String, dynamic>? ?? {};
     return {
-      'totalOrders': int.parse(row['total_orders']?.toString() ?? '0'),
-      'totalCustomers': int.parse(row['total_customers']?.toString() ?? '0'),
-      'totalItems': double.parse(row['total_items']?.toString() ?? '0'),
+      ...r,
+      'customer_name': customer['name'],
+      'customer_type': customer['type'],
     };
   }
 }

@@ -5,12 +5,14 @@ import 'package:green_veg_stock_management/app/data/models/customer_order_models
 import 'package:green_veg_stock_management/app/data/models/product_model.dart';
 import 'package:green_veg_stock_management/app/data/repositories/order_repository.dart';
 import 'package:green_veg_stock_management/app/data/repositories/product_repository.dart';
+import 'package:green_veg_stock_management/app/data/repositories/price_repository.dart';
 
 /// Order Controller
 /// Manages daily order collection and viewing
 class OrderController extends GetxController {
   final OrderRepository _orderRepository = OrderRepository();
   final ProductRepository _productRepository = ProductRepository();
+  final PriceRepository _priceRepository = PriceRepository();
   final AppController _appController = Get.find<AppController>();
 
   // Observables
@@ -27,23 +29,36 @@ class OrderController extends GetxController {
   final RxString productSearchQuery = ''.obs;
   final RxString orderSearchQuery = ''.obs; // Added for order search
   final RxDouble currentOrderTotal = 0.0.obs;
+  final RxMap<String, double> todayPrices = <String, double>{}.obs;
+  final RxString editingOrderId = ''.obs; // Track if editing existing order
 
   // Form controllers
   final notesController = TextEditingController();
+  final productSearchController = TextEditingController();
+  final deliveryAddressController = TextEditingController();
+  final contactPhoneController = TextEditingController();
+  final paidAmountController = TextEditingController();
 
   @override
   void onInit() {
     super.onInit();
     loadTodayOrders();
     loadAvailableProducts();
+    loadTodayPrices();
 
     // Calculate total when items change
     ever(currentOrderItems, (_) => calculateOrderTotal());
+    // Reload prices when date changes
+    ever(selectedDate, (_) => loadTodayPrices());
   }
 
   @override
   void onClose() {
     notesController.dispose();
+    productSearchController.dispose();
+    deliveryAddressController.dispose();
+    contactPhoneController.dispose();
+    paidAmountController.dispose();
     super.onClose();
   }
 
@@ -82,6 +97,21 @@ class OrderController extends GetxController {
       filteredProducts.value = products;
     } catch (e) {
       debugPrint('Error loading products: $e');
+    }
+  }
+
+  /// Load today's prices for order calculations
+  Future<void> loadTodayPrices() async {
+    try {
+      final vendorId = _appController.vendorId.value;
+      if (vendorId.isEmpty) return;
+
+      todayPrices.value = await _priceRepository.getPricesForDateMap(
+        vendorId,
+        selectedDate.value,
+      );
+    } catch (e) {
+      debugPrint('Error loading prices: $e');
     }
   }
 
@@ -126,13 +156,22 @@ class OrderController extends GetxController {
     // Clear previous items when selecting new customer
     currentOrderItems.clear();
     notesController.clear();
+    deliveryAddressController.clear();
+    contactPhoneController.clear();
   }
 
   /// Add item to current order
-  void addOrderItem(Product product, double quantity, {String? notes}) {
+  void addOrderItem(Product product, double quantity, {String? notes, double? costPrice}) {
     final existingIndex = currentOrderItems.indexWhere(
       (item) => item.productId == product.id,
     );
+
+    // Get price from today's prices
+    final pricePerUnit = todayPrices[product.id] ?? 0.0;
+    final newQuantity = existingIndex >= 0
+        ? currentOrderItems[existingIndex].quantity + quantity
+        : quantity;
+    final totalPrice = newQuantity * pricePerUnit;
 
     if (existingIndex >= 0) {
       // Update existing item
@@ -141,7 +180,10 @@ class OrderController extends GetxController {
         id: existing.id,
         orderId: existing.orderId,
         productId: existing.productId,
-        quantity: existing.quantity + quantity,
+        quantity: newQuantity,
+        pricePerUnit: pricePerUnit,
+        costPrice: costPrice ?? existing.costPrice,
+        totalPrice: totalPrice,
         notes: notes ?? existing.notes,
         createdAt: existing.createdAt,
         productNameGu: existing.productNameGu,
@@ -156,6 +198,9 @@ class OrderController extends GetxController {
           orderId: '',
           productId: product.id,
           quantity: quantity,
+          pricePerUnit: pricePerUnit,
+          costPrice: costPrice,
+          totalPrice: totalPrice,
           notes: notes,
           createdAt: DateTime.now(),
           productNameGu: product.nameGu,
@@ -167,23 +212,93 @@ class OrderController extends GetxController {
     currentOrderItems.refresh();
   }
 
+  /// Add custom item (not from product list)
+  void addCustomItem({
+    required String itemName,
+    required double quantity,
+    required double sellingPrice,
+    double? costPrice,
+    String? unitSymbol,
+    String? notes,
+  }) {
+    final totalPrice = quantity * sellingPrice;
+    
+    currentOrderItems.add(
+      OrderItem(
+        id: '',
+        orderId: '',
+        productId: null, // Custom item has no product ID
+        quantity: quantity,
+        pricePerUnit: sellingPrice,
+        costPrice: costPrice,
+        totalPrice: totalPrice,
+        notes: notes,
+        createdAt: DateTime.now(),
+        isCustomItem: true,
+        customItemName: itemName,
+        unitSymbol: unitSymbol,
+      ),
+    );
+    currentOrderItems.refresh();
+  }
+
+  /// Update custom item
+  void updateCustomItem(int index, {
+    String? itemName,
+    double? quantity,
+    double? sellingPrice,
+    double? costPrice,
+    String? unitSymbol,
+    String? notes,
+  }) {
+    final item = currentOrderItems[index];
+    final newQuantity = quantity ?? item.quantity;
+    final newPrice = sellingPrice ?? item.pricePerUnit ?? 0;
+    final totalPrice = newQuantity * newPrice;
+    
+    currentOrderItems[index] = OrderItem(
+      id: item.id,
+      orderId: item.orderId,
+      productId: item.productId,
+      quantity: newQuantity,
+      pricePerUnit: newPrice,
+      costPrice: costPrice,
+      totalPrice: totalPrice,
+      notes: notes ?? item.notes,
+      createdAt: item.createdAt,
+      isCustomItem: true,
+      customItemName: itemName ?? item.customItemName,
+      unitSymbol: unitSymbol ?? item.unitSymbol,
+      productNameGu: item.productNameGu,
+      productNameEn: item.productNameEn,
+    );
+    currentOrderItems.refresh();
+  }
+
   /// Update item quantity
-  void updateItemQuantity(int index, double quantity) {
+  void updateItemQuantity(int index, double quantity, {double? costPrice}) {
     if (quantity <= 0) {
       removeOrderItem(index);
       return;
     }
 
     final item = currentOrderItems[index];
+    final pricePerUnit =
+        item.pricePerUnit ?? todayPrices[item.productId] ?? 0.0;
+    final totalPrice = quantity * pricePerUnit;
+
     currentOrderItems[index] = OrderItem(
       id: item.id,
       orderId: item.orderId,
       productId: item.productId,
       quantity: quantity,
-      pricePerUnit: item.pricePerUnit,
-      totalPrice: item.totalPrice,
+      pricePerUnit: pricePerUnit,
+      costPrice: costPrice ?? item.costPrice,
+      totalPrice: totalPrice,
       notes: item.notes,
       createdAt: item.createdAt,
+      isCustomItem: item.isCustomItem,
+      customItemName: item.customItemName,
       productNameGu: item.productNameGu,
       productNameEn: item.productNameEn,
       unitSymbol: item.unitSymbol,
@@ -196,23 +311,100 @@ class OrderController extends GetxController {
     currentOrderItems.removeAt(index);
   }
 
+  /// Quick add 1 unit of a product (for inline + button)
+  void incrementProduct(Product product) {
+    addOrderItem(product, 1.0);
+  }
+
+  /// Decrement product quantity by 1 (for inline - button)
+  void decrementProduct(Product product) {
+    final existingIndex = currentOrderItems.indexWhere(
+      (item) => item.productId == product.id,
+    );
+
+    if (existingIndex >= 0) {
+      final currentQty = currentOrderItems[existingIndex].quantity;
+      if (currentQty <= 1.0) {
+        // Remove item if quantity would go to 0
+        removeOrderItem(existingIndex);
+      } else {
+        // Decrement by 1
+        updateItemQuantity(existingIndex, currentQty - 1.0);
+      }
+    }
+  }
+
+  /// Get product by ID (helper for UI)
+  Product? getProductById(String productId) {
+    try {
+      return availableProducts.firstWhere((p) => p.id == productId);
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Calculate order total
   void calculateOrderTotal() {
     double total = 0;
+    double totalCost = 0;
     for (final item in currentOrderItems) {
       if (item.totalPrice != null) {
         total += item.totalPrice!;
       }
+      if (item.costPrice != null) {
+        totalCost += item.costPrice! * item.quantity;
+      }
     }
     currentOrderTotal.value = total;
+    currentOrderTotalCost.value = totalCost;
   }
+
+  /// Get total cost of current order
+  final RxDouble currentOrderTotalCost = 0.0.obs;
 
   /// Clear current order
   void clearCurrentOrder() {
     selectedCustomer.value = null;
     currentOrderItems.clear();
     notesController.clear();
+    productSearchController.clear();
+    deliveryAddressController.clear();
+    contactPhoneController.clear();
+    paidAmountController.clear();
+    productSearchQuery.value = '';
+    filteredProducts.value = availableProducts;
     currentOrderTotal.value = 0;
+    currentOrderTotalCost.value = 0;
+    editingOrderId.value = ''; // Reset editing state
+  }
+
+  /// Load an existing order for editing
+  Future<void> loadOrderForEditing(Order order) async {
+    // Store the order ID to track that we're editing
+    editingOrderId.value = order.id;
+
+    // Set customer from order data
+    selectedCustomer.value = Customer(
+      id: order.customerId,
+      vendorId: order.vendorId,
+      name: order.customerName ?? 'Unknown',
+      type: order.customerType ?? CustomerType.other,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    );
+    notesController.text = order.notes ?? '';
+
+    // Load existing items for this order
+    try {
+      final items = await _orderRepository.getOrderItems(order.id);
+      currentOrderItems.value = items;
+      // Explicitly calculate total after loading items
+      calculateOrderTotal();
+    } catch (e) {
+      debugPrint('Error loading order items: $e');
+      currentOrderItems.clear();
+      currentOrderTotal.value = 0;
+    }
   }
 
   /// Save order
@@ -248,7 +440,7 @@ class OrderController extends GetxController {
       }
 
       final order = Order(
-        id: '',
+        id: editingOrderId.value.isNotEmpty ? editingOrderId.value : '',
         customerId: selectedCustomer.value!.id,
         vendorId: vendorId,
         orderDate: selectedDate.value,
@@ -260,11 +452,22 @@ class OrderController extends GetxController {
         updatedAt: DateTime.now(),
       );
 
-      await _orderRepository.createOrder(order, currentOrderItems.toList());
+      // Check if editing existing order or creating new
+      if (editingOrderId.value.isNotEmpty) {
+        // Update existing order
+        await _orderRepository.updateOrder(
+          editingOrderId.value,
+          order,
+          currentOrderItems.toList(),
+        );
+      } else {
+        // Create new order
+        await _orderRepository.createOrder(order, currentOrderItems.toList());
+      }
 
       Get.snackbar(
         'success'.tr,
-        'order_saved'.tr,
+        editingOrderId.value.isNotEmpty ? 'order_updated'.tr : 'order_saved'.tr,
         snackPosition: SnackPosition.BOTTOM,
       );
 

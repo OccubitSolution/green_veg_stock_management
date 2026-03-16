@@ -1,3 +1,8 @@
+/// Orders View — Premium Design
+///
+/// Daily order management with premium UI using AppTheme design system.
+library;
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -6,43 +11,48 @@ import 'package:green_veg_stock_management/app/data/models/customer_order_models
 import 'package:green_veg_stock_management/app/data/models/product_model.dart';
 import 'package:green_veg_stock_management/app/modules/orders/controllers/order_controller.dart';
 import 'package:green_veg_stock_management/app/widgets/common_widgets.dart';
+import 'package:green_veg_stock_management/app/theme/app_theme.dart';
+import 'package:green_veg_stock_management/app/routes/app_routes.dart';
 
 class OrdersView extends GetView<OrderController> {
   const OrdersView({super.key});
 
-  // Exact sizing specifications
-  static const double _dateSelectorHeight = 56.0;
-  static const double _cardBorderRadius = 16.0;
-  static const double _iconSize = 24.0;
-  static const double _spacingXS = 4.0;
-  static const double _spacingSM = 8.0;
-  static const double _spacingMD = 16.0;
-  static const double _spacingLG = 24.0;
-  static const double _spacingXL = 32.0;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F6),
-      body: Column(
-        children: [
-          // Header Section
-          _buildHeader(context),
+      backgroundColor: AppTheme.backgroundLight,
+      resizeToAvoidBottomInset: true,
+      body: Obx(() {
+        // When adding order items, show full-screen order entry without main header
+        if (controller.selectedCustomer.value != null) {
+          return _buildOrderEntry(context);
+        }
+        // Otherwise show normal view with header and date selector
+        return Column(
+          children: [
+            // Header Section
+            _buildHeader(context),
 
-          // Date Selector
-          _buildDateSelector(context),
+            // Date Selector
+            _buildDateSelector(context),
 
-          // Main Content
-          Expanded(
-            child: Obx(() {
-              if (controller.selectedCustomer.value == null) {
-                return _buildCustomerSelection(context);
-              }
-              return _buildOrderEntry(context);
-            }),
-          ),
-        ],
-      ),
+            // Main Content - Customer Selection
+            Expanded(
+              child: _buildCustomerSelection(context),
+            ),
+          ],
+        );
+      }),
+      floatingActionButton: Obx(() {
+        if (controller.selectedCustomer.value == null) {
+          return FloatingActionButton(
+            onPressed: () => _showCustomerPicker(),
+            backgroundColor: AppTheme.primaryColor,
+            child: const Icon(Icons.add_rounded, color: Colors.white),
+          );
+        }
+        return const SizedBox.shrink();
+      }),
       bottomNavigationBar: Obx(() {
         if (controller.selectedCustomer.value != null) {
           return _buildBottomBar(context);
@@ -52,24 +62,21 @@ class OrdersView extends GetView<OrderController> {
     );
   }
 
+  // ─── Header ──────────────────────────────────────────────────────────
+
   Widget _buildHeader(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF00897B), Color(0xFF004D40)],
-        ),
+        gradient: AppTheme.primaryGradient,
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(_cardBorderRadius),
-          bottomRight: Radius.circular(_cardBorderRadius),
+          bottomLeft: Radius.circular(AppTheme.radiusXL),
+          bottomRight: Radius.circular(AppTheme.radiusXL),
         ),
       ),
-      constraints: const BoxConstraints(maxHeight: 250),
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.all(_spacingMD),
+          padding: const EdgeInsets.all(AppTheme.spacingMD),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,16 +88,36 @@ class OrdersView extends GetView<OrderController> {
                   // Back Button if customer selected
                   Obx(
                     () => controller.selectedCustomer.value != null
-                        ? IconButton(
-                            onPressed: () => controller.clearCurrentOrder(),
-                            icon: const Icon(
-                              Icons.arrow_back,
-                              color: Colors.white,
+                        ? Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.radiusMD,
+                              ),
                             ),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
+                            child: IconButton(
+                              onPressed: () => controller.clearCurrentOrder(),
+                              icon: const Icon(
+                                Icons.arrow_back_rounded,
+                                color: Colors.white,
+                              ),
+                            ),
                           )
-                        : const SizedBox(width: 48),
+                        : Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.radiusMD,
+                              ),
+                            ),
+                            child: IconButton(
+                              onPressed: () => Get.back(),
+                              icon: const Icon(
+                                Icons.arrow_back_rounded,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                   ),
 
                   // Title
@@ -100,30 +127,29 @@ class OrdersView extends GetView<OrderController> {
                       color: Colors.white,
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
+                      letterSpacing: -0.3,
                     ),
                   ),
 
                   // Purchase List Button
-                  IconButton(
-                    onPressed: () => Get.toNamed('/purchase-list'),
-                    icon: Container(
-                      padding: const EdgeInsets.all(_spacingSM),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.receipt_long,
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                    ),
+                    child: IconButton(
+                      onPressed: () => Get.toNamed(AppRoutes.purchaseList),
+                      icon: const Icon(
+                        Icons.receipt_long_rounded,
                         color: Colors.white,
                         size: 20,
                       ),
                     ),
                   ),
                 ],
-              ),
+              ).animate().fadeIn().slideY(begin: -0.2),
 
-              const SizedBox(height: _spacingMD),
+              const SizedBox(height: AppTheme.spacingMD),
 
               // Stats Row
               Obx(
@@ -131,36 +157,36 @@ class OrdersView extends GetView<OrderController> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildStatItem(
-                      Icons.receipt_long,
+                      Icons.receipt_long_rounded,
                       controller.todayOrders.length.toString(),
                       'orders'.tr,
                     ),
                     Container(
                       width: 1,
-                      height: 40,
-                      color: Colors.white.withValues(alpha: 0.3),
+                      height: 36,
+                      color: Colors.white.withValues(alpha: 0.25),
                     ),
                     _buildStatItem(
-                      Icons.people,
+                      Icons.people_rounded,
                       controller.orderStats['totalCustomers'].toString(),
                       'customers'.tr,
                     ),
                     Container(
                       width: 1,
-                      height: 40,
-                      color: Colors.white.withValues(alpha: 0.3),
+                      height: 36,
+                      color: Colors.white.withValues(alpha: 0.25),
                     ),
                     _buildStatItem(
-                      Icons.inventory,
+                      Icons.inventory_2_rounded,
                       (controller.orderStats['totalItems'] ?? 0)
-                          .toStringAsFixed(1),
+                          .toStringAsFixed(0),
                       'items'.tr,
                     ),
                   ],
                 ),
-              ),
+              ).animate().fadeIn(delay: 200.ms),
 
-              const SizedBox(height: _spacingSM),
+              const SizedBox(height: AppTheme.spacingSM),
             ],
           ),
         ),
@@ -171,8 +197,8 @@ class OrdersView extends GetView<OrderController> {
   Widget _buildStatItem(IconData icon, String value, String label) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white.withValues(alpha: 0.9), size: _iconSize),
-        const SizedBox(height: _spacingXS),
+        Icon(icon, color: Colors.white.withValues(alpha: 0.85), size: 22),
+        const SizedBox(height: 4),
         Text(
           value,
           style: const TextStyle(
@@ -186,84 +212,39 @@ class OrdersView extends GetView<OrderController> {
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.7),
             fontSize: 12,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
     );
   }
 
+  // ─── Date Selector ───────────────────────────────────────────────────
+
   Widget _buildDateSelector(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(_spacingMD),
-      padding: const EdgeInsets.symmetric(
-        horizontal: _spacingSM,
-        vertical: _spacingXS,
-      ),
-      height: _dateSelectorHeight,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       child: Obx(
-        () => Row(
-          children: [
-            IconButton(
-              onPressed: () {
-                final newDate = controller.selectedDate.value.subtract(
-                  const Duration(days: 1),
-                );
-                controller.setDate(newDate);
-              },
-              icon: const Icon(Icons.chevron_left, color: Color(0xFF00695C)),
-              padding: EdgeInsets.zero,
-            ),
-            Expanded(
-              child: GestureDetector(
-                onTap: () => _selectDate(context),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.calendar_today,
-                      size: 18,
-                      color: Color(0xFF00695C),
-                    ),
-                    const SizedBox(width: _spacingSM),
-                    Text(
-                      DateFormat(
-                        'EEE, dd MMM yyyy',
-                      ).format(controller.selectedDate.value),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A1A),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            IconButton(
-              onPressed: () {
-                final newDate = controller.selectedDate.value.add(
-                  const Duration(days: 1),
-                );
-                controller.setDate(newDate);
-              },
-              icon: const Icon(Icons.chevron_right, color: Color(0xFF00695C)),
-              padding: EdgeInsets.zero,
-            ),
-          ],
+        () => ModernDateSelector(
+          dateText: DateFormat(
+            'EEE, dd MMM yyyy',
+          ).format(controller.selectedDate.value),
+          onPrevious: () {
+            final newDate = controller.selectedDate.value.subtract(
+              const Duration(days: 1),
+            );
+            controller.setDate(newDate);
+          },
+          onNext: () {
+            final newDate = controller.selectedDate.value.add(
+              const Duration(days: 1),
+            );
+            controller.setDate(newDate);
+          },
+          onTap: () => _selectDate(context),
         ),
       ),
-    );
+    ).animate().fadeIn(delay: 100.ms);
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -275,7 +256,9 @@ class OrdersView extends GetView<OrderController> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Color(0xFF00695C)),
+            colorScheme: const ColorScheme.light(
+              primary: AppTheme.primaryColor,
+            ),
           ),
           child: child!,
         );
@@ -286,43 +269,22 @@ class OrdersView extends GetView<OrderController> {
     }
   }
 
+  // ─── Customer Selection ──────────────────────────────────────────────
+
   Widget _buildCustomerSelection(BuildContext context) {
     return Column(
       children: [
         // Search Bar
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: _spacingMD),
-          child: TextField(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
+          child: ModernSearchBar(
+            hintText: 'search_customers'.tr,
             onChanged: controller.filterOrders,
-            decoration: InputDecoration(
-              hintText: 'search_customers'.tr,
-              prefixIcon: const Icon(Icons.search, color: Color(0xFF00695C)),
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Color(0xFF00695C),
-                  width: 2,
-                ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: _spacingMD,
-                vertical: _spacingMD,
-              ),
-            ),
+            onClear: () => controller.filterOrders(''),
           ),
-        ),
+        ).animate().fadeIn(delay: 150.ms),
 
-        const SizedBox(height: _spacingMD),
+        const SizedBox(height: AppTheme.spacingMD),
 
         // Today's Orders List
         Expanded(
@@ -336,11 +298,17 @@ class OrdersView extends GetView<OrderController> {
             }
 
             if (controller.filteredTodayOrders.isEmpty) {
-              return Center(child: Text('no_orders_found'.tr));
+              return EmptyStateWidget(
+                icon: Icons.search_off_rounded,
+                message: 'no_orders_found'.tr,
+              );
             }
 
             return ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: _spacingMD),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacingMD,
+              ),
+              physics: const BouncingScrollPhysics(),
               itemCount: controller.filteredTodayOrders.length,
               itemBuilder: (context, index) {
                 final order = controller.filteredTodayOrders[index];
@@ -354,102 +322,40 @@ class OrdersView extends GetView<OrderController> {
   }
 
   Widget _buildEmptyOrdersState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: const Color(0xFF00695C).withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.receipt_long_outlined,
-              size: 56,
-              color: Color(0xFF00695C),
-            ),
-          ),
-          const SizedBox(height: _spacingLG),
-          Text(
-            'no_orders_today'.tr,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A1A),
-            ),
-          ),
-          const SizedBox(height: _spacingSM),
-          Text(
-            'select_customer_to_add_order'.tr,
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: _spacingXL),
-          ElevatedButton.icon(
-            onPressed: () => _showCustomerPicker(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00695C),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: _spacingLG,
-                vertical: _spacingMD,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            icon: const Icon(Icons.add),
-            label: Text('add_new_order'.tr),
-          ),
-        ],
-      ),
+    return EmptyStateWidget(
+      icon: Icons.receipt_long_outlined,
+      message: 'no_orders_today'.tr,
+      actionLabel: 'add_new_order'.tr,
+      onAction: () => _showCustomerPicker(),
     );
   }
 
   Widget _buildOrderCard(Order order, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: _spacingMD),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(_cardBorderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(_cardBorderRadius),
-        child: InkWell(
-          onTap: () {
-            // View order details
-          },
-          borderRadius: BorderRadius.circular(_cardBorderRadius),
-          child: Padding(
-            padding: const EdgeInsets.all(_spacingMD),
+    final delayMs = (index * 50).clamp(0, 300);
+    return PremiumCard(
+          margin: const EdgeInsets.only(bottom: AppTheme.spacingSM),
+          padding: const EdgeInsets.all(AppTheme.spacingMD),
+          child: InkWell(
+            onTap: () => _editOrder(order),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLG),
             child: Row(
               children: [
                 // Customer Type Icon
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 50,
+                  height: 50,
                   decoration: BoxDecoration(
-                    color: (order.customerType?.color ?? Colors.grey)
-                        .withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    color: (order.customerType?.color ?? AppTheme.primaryColor)
+                        .withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMD),
                   ),
                   child: Icon(
-                    order.customerType?.icon ?? Icons.business,
-                    color: order.customerType?.color ?? Colors.grey,
-                    size: 28,
+                    order.customerType?.icon ?? Icons.business_rounded,
+                    color: order.customerType?.color ?? AppTheme.primaryColor,
+                    size: 26,
                   ),
                 ),
-                const SizedBox(width: _spacingMD),
+                const SizedBox(width: AppTheme.spacingMD),
 
                 // Order Info
                 Expanded(
@@ -459,22 +365,24 @@ class OrdersView extends GetView<OrderController> {
                       Text(
                         order.customerName ?? 'Unknown',
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1A1A1A),
+                          color: AppTheme.textPrimaryLight,
                         ),
                       ),
-                      const SizedBox(height: _spacingXS),
+                      const SizedBox(height: 4),
                       Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
-                              vertical: 2,
+                              vertical: 3,
                             ),
                             decoration: BoxDecoration(
                               color: order.status.color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.radiusSM,
+                              ),
                             ),
                             child: Text(
                               order.status.getName(
@@ -487,14 +395,6 @@ class OrdersView extends GetView<OrderController> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: _spacingSM),
-                          Text(
-                            '${controller.orderStats['totalItems']?.toStringAsFixed(0) ?? '0'} items',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey[600],
-                            ),
-                          ),
                         ],
                       ),
                     ],
@@ -502,254 +402,409 @@ class OrdersView extends GetView<OrderController> {
                 ),
 
                 // Arrow
-                Icon(Icons.chevron_right, color: Colors.grey[400]),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppTheme.textTertiaryLight,
+                  size: 22,
+                ),
               ],
             ),
           ),
-        ),
-      ),
-    ).animate(delay: (index * 50).ms).fadeIn().slideX(begin: 0.1);
+        )
+        .animate(delay: Duration(milliseconds: delayMs))
+        .fadeIn()
+        .slideX(begin: 0.08);
   }
+
+  // ─── Order Entry ─────────────────────────────────────────────────────
 
   Widget _buildOrderEntry(BuildContext context) {
     return Column(
       children: [
-        // Selected Customer Header
+        // Ultra-compact header with just customer name and search
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: _spacingMD),
-          padding: const EdgeInsets.all(_spacingMD),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.spacingMD,
+            vertical: AppTheme.spacingSM,
+          ),
+          color: AppTheme.surfaceLight,
+          child: SafeArea(
+            bottom: false,
+            child: Row(
+              children: [
+                // Back button
+                GestureDetector(
+                  onTap: () => controller.clearCurrentOrder(),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spacingSM),
+                // Customer name only - compact
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        controller.selectedCustomer.value?.name ?? '',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimaryLight,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Search bar - inline, no extra container
+        Container(
+          margin: const EdgeInsets.symmetric(
+            horizontal: AppTheme.spacingMD,
+            vertical: AppTheme.spacingXS,
+          ),
+          height: 42,
           decoration: BoxDecoration(
-            color: const Color(0xFF00695C).withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
             border: Border.all(
-              color: const Color(0xFF00695C).withValues(alpha: 0.2),
+              color: AppTheme.borderLight.withValues(alpha: 0.5),
+              width: 1,
             ),
           ),
           child: Row(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color:
-                      (controller.selectedCustomer.value?.type.color ??
-                              Colors.grey)
-                          .withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  controller.selectedCustomer.value?.type.icon ??
-                      Icons.business,
-                  color:
-                      controller.selectedCustomer.value?.type.color ??
-                      Colors.grey,
+              Expanded(
+                child: TextField(
+                  controller: controller.productSearchController,
+                  onChanged: controller.filterProducts,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'search_products'.tr,
+                    hintStyle: TextStyle(
+                      color: AppTheme.textTertiaryLight,
+                      fontSize: 14,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: AppTheme.primaryColor,
+                      size: 20,
+                    ),
+                    prefixIconConstraints: const BoxConstraints(
+                      minWidth: 40,
+                      minHeight: 40,
+                    ),
+                    suffixIcon: Obx(() {
+                      if (controller.productSearchQuery.value.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return IconButton(
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: AppTheme.textSecondaryLight,
+                          size: 18,
+                        ),
+                        onPressed: () {
+                          controller.productSearchController.clear();
+                          controller.filterProducts('');
+                        },
+                      );
+                    }),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: _spacingMD),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      controller.selectedCustomer.value?.name ?? '',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A1A),
+              // Add custom item button
+              GestureDetector(
+                onTap: () => _showCustomItemDialog(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.add_circle_outline,
+                        color: AppTheme.primaryColor,
+                        size: 20,
                       ),
-                    ),
-                    Text(
-                      controller.selectedCustomer.value?.type.getName(
-                            Get.locale?.languageCode ?? 'en',
-                          ) ??
-                          '',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        'Custom',
+                        style: TextStyle(
+                          color: AppTheme.primaryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
         ),
 
-        const SizedBox(height: _spacingMD),
-
-        // Product Search
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: _spacingMD),
-          child: TextField(
-            onChanged: controller.filterProducts,
-            decoration: InputDecoration(
-              hintText: 'search_products'.tr,
-              prefixIcon: const Icon(Icons.search, color: Color(0xFF00695C)),
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Color(0xFF00695C),
-                  width: 2,
-                ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: _spacingMD,
-                vertical: _spacingMD,
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: _spacingMD),
-
-        // Current Order Items or Product List
-        Expanded(
-          child: Obx(() {
-            if (controller.productSearchQuery.value.isNotEmpty) {
-              return _buildProductList();
-            }
-            return _buildCurrentOrderItems();
-          }),
-        ),
+        // Product List - maximum space
+        Expanded(child: _buildProductList()),
       ],
     );
   }
 
   Widget _buildProductList() {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: _spacingMD),
-      itemCount: controller.filteredProducts.length,
-      itemBuilder: (context, index) {
-        final product = controller.filteredProducts[index];
-        return _buildProductCard(product);
-      },
-    );
+    return Obx(() {
+      // Show all products by default, filtered products when searching
+      final productsToShow = controller.productSearchQuery.value.isEmpty
+          ? controller.availableProducts
+          : controller.filteredProducts;
+
+      if (productsToShow.isEmpty) {
+        return EmptyStateWidget(
+          icon: Icons.inventory_2_outlined,
+          message: controller.productSearchQuery.value.isEmpty
+              ? 'no_products'.tr
+              : 'no_products_found'.tr,
+        );
+      }
+
+      return ListView.builder(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.spacingMD,
+          vertical: AppTheme.spacingXS,
+        ),
+        physics: const BouncingScrollPhysics(),
+        itemCount: productsToShow.length,
+        itemBuilder: (context, index) {
+          final product = productsToShow[index];
+          return _buildInlineProductCard(product, index);
+        },
+      );
+    });
   }
 
-  Widget _buildProductCard(Product product) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: _spacingMD),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(_cardBorderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+  Widget _buildInlineProductCard(Product product, int index) {
+    final iconColor = AppTheme.getCategoryColor(product.categoryId);
+    final delayMs = (index * 30).clamp(0, 200);
+
+    return Obx(() {
+      // Find existing order item for this product
+      final existingItem = controller.currentOrderItems.firstWhereOrNull(
+        (item) => item.productId == product.id,
+      );
+      final quantity = existingItem?.quantity ?? 0;
+      final price = controller.todayPrices[product.id];
+      final isAdded = quantity > 0;
+
+      return GestureDetector(
+        onTap: () => _showQuickEditDialog(product, quantity),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: AppTheme.spacingXS),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.spacingSM,
+            vertical: AppTheme.spacingSM,
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(_cardBorderRadius),
-        child: InkWell(
-          onTap: () => _showQuantityDialog(product),
-          borderRadius: BorderRadius.circular(_cardBorderRadius),
-          child: Padding(
-            padding: const EdgeInsets.all(_spacingMD),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF00897B).withValues(alpha: 0.15),
-                        const Color(0xFF00897B).withValues(alpha: 0.05),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.eco,
-                    color: Color(0xFF00897B),
-                    size: 24,
-                  ),
+          decoration: BoxDecoration(
+            color: isAdded 
+                ? AppTheme.primaryColor.withValues(alpha: 0.05)
+                : Colors.white,
+            borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+            border: Border.all(
+              color: isAdded
+                  ? AppTheme.primaryColor.withValues(alpha: 0.3)
+                  : AppTheme.borderLight.withValues(alpha: 0.5),
+              width: isAdded ? 1.5 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Compact product icon
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.subtleGradient(iconColor),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSM),
                 ),
-                const SizedBox(width: _spacingMD),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                child: Icon(Icons.eco, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: AppTheme.spacingSM),
+
+              // Product info - single line layout
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.getName(Get.locale?.languageCode ?? 'en'),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: isAdded ? FontWeight.w700 : FontWeight.w600,
+                        color: isAdded 
+                            ? AppTheme.primaryColor 
+                            : AppTheme.textPrimaryLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (price != null)
                       Text(
-                        product.getName(Get.locale?.languageCode ?? 'en'),
+                        '₹${price.toStringAsFixed(1)} / ${product.unitSymbol}',
                         style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1A1A1A),
+                          fontSize: 12,
+                          color: AppTheme.textSecondaryLight,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      Text(
-                        '${'unit'.tr}: ${product.unitSymbol}',
-                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
-                IconButton(
-                  onPressed: () => _showQuantityDialog(product),
-                  icon: Container(
-                    padding: const EdgeInsets.all(_spacingSM),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00695C).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.add,
-                      color: Color(0xFF00695C),
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+
+              // Compact quantity controls
+              _buildCompactQuantityControl(product, quantity),
+            ],
           ),
         ),
-      ),
-    );
+      )
+          .animate(delay: Duration(milliseconds: delayMs))
+          .fadeIn()
+          .slideX(begin: 0.05);
+    });
   }
 
-  Widget _buildCurrentOrderItems() {
-    if (controller.currentOrderItems.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.shopping_basket_outlined,
-              size: 64,
-              color: Colors.grey[300],
-            ),
-            const SizedBox(height: _spacingMD),
-            Text(
-              'no_items_added'.tr,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[600],
+  Widget _buildCompactQuantityControl(Product product, double quantity) {
+    if (quantity == 0) {
+      return GestureDetector(
+        onTap: () => controller.incrementProduct(product),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            gradient: AppTheme.primaryGradient,
+            borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
-            ),
-            const SizedBox(height: _spacingSM),
-            Text(
-              'search_and_add_products'.tr,
-              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-            ),
-          ],
+            ],
+          ),
+          child: const Icon(
+            Icons.add_rounded,
+            color: Colors.white,
+            size: 22,
+          ),
         ),
       );
     }
 
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Decrement
+          GestureDetector(
+            onTap: () => controller.decrementProduct(product),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              child: const Icon(
+                Icons.remove_rounded,
+                color: AppTheme.primaryColor,
+                size: 18,
+              ),
+            ),
+          ),
+          // Quantity
+          Container(
+            constraints: const BoxConstraints(minWidth: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppTheme.radiusXS),
+            ),
+            child: Text(
+              quantity.toStringAsFixed(quantity % 1 == 0 ? 0 : 1),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppTheme.primaryColor,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          // Increment
+          GestureDetector(
+            onTap: () => controller.incrementProduct(product),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              child: const Icon(
+                Icons.add_rounded,
+                color: AppTheme.primaryColor,
+                size: 18,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ignore: unused_element
+  Widget _buildCurrentOrderItems() {
+    if (controller.currentOrderItems.isEmpty) {
+      return EmptyStateWidget(
+        icon: Icons.shopping_basket_outlined,
+        message: 'no_items_added'.tr,
+      );
+    }
+
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: _spacingMD),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
+      physics: const BouncingScrollPhysics(),
       itemCount: controller.currentOrderItems.length,
       itemBuilder: (context, index) {
         final item = controller.currentOrderItems[index];
@@ -759,118 +814,114 @@ class OrdersView extends GetView<OrderController> {
   }
 
   Widget _buildOrderItemCard(OrderItem item, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: _spacingMD),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(_cardBorderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return PremiumCard(
+      margin: const EdgeInsets.only(bottom: AppTheme.spacingSM),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+            ),
+            child: const Icon(
+              Icons.eco,
+              color: AppTheme.primaryColor,
+              size: 22,
+            ),
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(_spacingMD),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFF00897B).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.eco, color: Color(0xFF00897B), size: 22),
-            ),
-            const SizedBox(width: _spacingMD),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.getProductName(Get.locale?.languageCode ?? 'en'),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
-                    ),
-                  ),
-                  Text(
-                    '${item.quantity} ${item.unitSymbol}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF00897B),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Row(
+          const SizedBox(width: AppTheme.spacingMD),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildQuantityButton(
-                  Icons.remove,
-                  () =>
-                      controller.updateItemQuantity(index, item.quantity - 0.5),
-                ),
-                Container(
-                  width: 56,
-                  alignment: Alignment.center,
-                  child: Text(
-                    item.quantity.toStringAsFixed(1),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                Text(
+                  item.getProductName(Get.locale?.languageCode ?? 'en'),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimaryLight,
                   ),
                 ),
-                _buildQuantityButton(
-                  Icons.add,
-                  () =>
-                      controller.updateItemQuantity(index, item.quantity + 0.5),
-                ),
-                const SizedBox(width: _spacingSM),
-                IconButton(
-                  onPressed: () => controller.removeOrderItem(index),
-                  icon: Icon(Icons.delete_outline, color: Colors.red[400]),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                const SizedBox(height: 2),
+                Text(
+                  '${item.quantity} ${item.unitSymbol}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.primaryColor,
+                  ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildQuantityButton(
+                Icons.remove_rounded,
+                () => controller.updateItemQuantity(index, item.quantity - 0.5),
+              ),
+              Container(
+                width: 50,
+                alignment: Alignment.center,
+                child: Text(
+                  item.quantity.toStringAsFixed(1),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimaryLight,
+                  ),
+                ),
+              ),
+              _buildQuantityButton(
+                Icons.add_rounded,
+                () => controller.updateItemQuantity(index, item.quantity + 0.5),
+              ),
+              const SizedBox(width: AppTheme.spacingSM),
+              GestureDetector(
+                onTap: () => controller.removeOrderItem(index),
+                child: Icon(
+                  Icons.delete_outline_rounded,
+                  color: AppTheme.error,
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
-    );
+    ).animate(delay: (index * 50).ms).fadeIn().slideX(begin: 0.05);
   }
 
   Widget _buildQuantityButton(IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(AppTheme.radiusSM),
       child: Container(
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: const Color(0xFF00695C).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
+          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSM),
         ),
-        child: Icon(icon, color: const Color(0xFF00695C), size: 18),
+        child: Icon(icon, color: AppTheme.primaryColor, size: 18),
       ),
     );
   }
 
+  // ─── Bottom Bar ──────────────────────────────────────────────────────
+
   Widget _buildBottomBar(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(_spacingMD),
+      padding: const EdgeInsets.all(AppTheme.spacingMD),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surfaceLight,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),
@@ -886,42 +937,38 @@ class OrdersView extends GetView<OrderController> {
                 children: [
                   Text(
                     '${controller.currentOrderItems.length} ${'items'.tr}',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textSecondaryLight,
+                    ),
                   ),
+                  const SizedBox(height: 2),
                   Obx(
                     () => Text(
                       'Total: ₹${controller.currentOrderTotal.value.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A1A),
+                        color: AppTheme.textPrimaryLight,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            ElevatedButton.icon(
+            GradientButton(
+              label: 'save_order'.tr,
+              icon: Icons.check_rounded,
               onPressed: () => controller.saveOrder(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00695C),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _spacingLG,
-                  vertical: _spacingMD,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              icon: const Icon(Icons.check),
-              label: Text('save_order'.tr),
+              isLoading: controller.isSaving.value,
             ),
           ],
         ),
       ),
     );
   }
+
+  // ─── Dialogs ─────────────────────────────────────────────────────────
 
   Future<void> _showCustomerPicker() async {
     // Navigate to customers list for selection
@@ -935,122 +982,79 @@ class OrdersView extends GetView<OrderController> {
     }
   }
 
-  void _showQuantityDialog(Product product) {
-    final quantityController = TextEditingController(text: '1.0');
-    final notesController = TextEditingController();
+  /// Edit an existing order by selecting its customer and loading its items
+  void _editOrder(Order order) {
+    controller.loadOrderForEditing(order);
+  }
+
+  /// Quick edit dialog for precise quantity entry
+  void _showQuickEditDialog(Product product, double currentQty) {
+    final quantityController = TextEditingController(
+      text: currentQty.toStringAsFixed(currentQty % 1 == 0 ? 0 : 1),
+    );
 
     Get.dialog(
       Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: const EdgeInsets.all(_spacingLG),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusXL),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppTheme.spacingLG),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF00897B), Color(0xFF00695C)],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.eco, color: Colors.white),
-                  ),
-                  const SizedBox(width: _spacingMD),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.getName(Get.locale?.languageCode ?? 'en'),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          '${'unit'.tr}: ${product.unitSymbol}',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: _spacingLG),
-
-              // Quantity Input
+              // Product name
               Text(
-                'quantity'.tr,
+                product.getName(Get.locale?.languageCode ?? 'en'),
                 style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimaryLight,
                 ),
               ),
-              const SizedBox(height: _spacingSM),
+              const SizedBox(height: AppTheme.spacingMD),
+
+              // Quantity field
               TextField(
                 controller: quantityController,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
+                autofocus: true,
                 decoration: InputDecoration(
-                  hintText: 'enter_quantity'.tr,
-                  suffixText: product.unitSymbol,
+                  labelText: 'quantity'.tr,
+                  suffixText: product.unitSymbol ?? '',
                   filled: true,
-                  fillColor: Colors.grey[50],
+                  fillColor: AppTheme.backgroundLight,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLG),
                     borderSide: BorderSide.none,
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
-                  ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLG),
                     borderSide: const BorderSide(
-                      color: Color(0xFF00695C),
+                      color: AppTheme.primaryColor,
                       width: 2,
                     ),
                   ),
                 ),
+                onSubmitted: (value) {
+                  final qty = double.tryParse(value) ?? 0;
+                  if (qty > 0) {
+                    final index = controller.currentOrderItems.indexWhere(
+                      (item) => item.productId == product.id,
+                    );
+                    if (index >= 0) {
+                      controller.updateItemQuantity(index, qty);
+                    }
+                  }
+                  Get.back();
+                },
               ),
-              const SizedBox(height: _spacingMD),
+              const SizedBox(height: AppTheme.spacingLG),
 
-              // Notes Input
-              Text(
-                'notes'.tr,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: _spacingSM),
-              TextField(
-                controller: notesController,
-                decoration: InputDecoration(
-                  hintText: 'optional_notes'.tr,
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
-                  ),
-                ),
-              ),
-              const SizedBox(height: _spacingLG),
-
-              // Actions
+              // Buttons
               Row(
                 children: [
                   Expanded(
@@ -1058,48 +1062,500 @@ class OrdersView extends GetView<OrderController> {
                       onPressed: () => Get.back(),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                          vertical: _spacingMD,
+                          vertical: AppTheme.spacingMD,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusLG,
+                          ),
                         ),
                       ),
                       child: Text('cancel'.tr),
                     ),
                   ),
-                  const SizedBox(width: _spacingMD),
+                  const SizedBox(width: AppTheme.spacingSM),
                   Expanded(
-                    flex: 2,
                     child: ElevatedButton(
                       onPressed: () {
-                        final quantity =
-                            double.tryParse(quantityController.text) ?? 1.0;
-                        controller.addOrderItem(
-                          product,
-                          quantity,
-                          notes: notesController.text.isEmpty
-                              ? null
-                              : notesController.text,
-                        );
+                        final qty =
+                            double.tryParse(quantityController.text) ?? 0;
+                        if (qty > 0) {
+                          final index = controller.currentOrderItems.indexWhere(
+                            (item) => item.productId == product.id,
+                          );
+                          if (index >= 0) {
+                            controller.updateItemQuantity(index, qty);
+                          }
+                        }
                         Get.back();
-                        controller.filterProducts('');
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00695C),
-                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
-                          vertical: _spacingMD,
+                          vertical: AppTheme.spacingMD,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusLG,
+                          ),
                         ),
                       ),
-                      child: Text('add_to_order'.tr),
+                      child: Text('update'.tr),
                     ),
                   ),
                 ],
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ignore: unused_element
+  void _showQuantityDialog(Product product) {
+    final quantityController = TextEditingController(text: '1.0');
+    final notesController = TextEditingController();
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusXL),
+        ),
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.all(AppTheme.spacingLG),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.primaryGradient,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                      ),
+                      child: const Icon(Icons.eco, color: Colors.white),
+                    ),
+                    const SizedBox(width: AppTheme.spacingMD),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            product.getName(Get.locale?.languageCode ?? 'en'),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimaryLight,
+                            ),
+                          ),
+                          Text(
+                            '${'unit'.tr}: ${product.unitSymbol}',
+                            style: TextStyle(
+                              color: AppTheme.textSecondaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.spacingLG),
+
+                // Quantity Input
+                Text(
+                  'quantity'.tr,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimaryLight,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingSM),
+                TextField(
+                  controller: quantityController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'enter_quantity'.tr,
+                    hintStyle: const TextStyle(
+                      color: AppTheme.textTertiaryLight,
+                    ),
+                    suffixText: product.unitSymbol,
+                    filled: true,
+                    fillColor: AppTheme.backgroundLight,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                      borderSide: const BorderSide(
+                        color: AppTheme.primaryColor,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingMD),
+
+                // Notes Input
+                Text(
+                  'notes'.tr,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimaryLight,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingSM),
+                TextField(
+                  controller: notesController,
+                  decoration: InputDecoration(
+                    hintText: 'optional_notes'.tr,
+                    hintStyle: const TextStyle(
+                      color: AppTheme.textTertiaryLight,
+                    ),
+                    filled: true,
+                    fillColor: AppTheme.backgroundLight,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                      borderSide: const BorderSide(
+                        color: AppTheme.primaryColor,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingLG),
+
+                // Actions
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusLG,
+                            ),
+                          ),
+                          side: BorderSide(color: AppTheme.borderLight),
+                        ),
+                        child: Text(
+                          'cancel'.tr,
+                          style: TextStyle(color: AppTheme.textSecondaryLight),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppTheme.spacingMD),
+                    Expanded(
+                      flex: 2,
+                      child: GradientButton(
+                        label: 'add_to_order'.tr,
+                        onPressed: () {
+                          final quantity =
+                              double.tryParse(quantityController.text) ?? 1.0;
+                          controller.addOrderItem(
+                            product,
+                            quantity,
+                            notes: notesController.text.isEmpty
+                                ? null
+                                : notesController.text,
+                          );
+                          Get.back();
+                          controller.filterProducts('');
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCustomItemDialog() {
+    final nameController = TextEditingController();
+    final quantityController = TextEditingController(text: '1.0');
+    final sellingPriceController = TextEditingController();
+    final costPriceController = TextEditingController();
+    final unitController = TextEditingController(text: 'kg');
+    final notesController = TextEditingController();
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusXL),
+        ),
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.all(AppTheme.spacingLG),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.primaryGradient,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                      ),
+                      child: const Icon(Icons.add_circle, color: Colors.white),
+                    ),
+                    const SizedBox(width: AppTheme.spacingMD),
+                    Expanded(
+                      child: Text(
+                        'Add Custom Item',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimaryLight,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.spacingLG),
+
+                // Item Name
+                Text(
+                  'Item Name *',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimaryLight,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingSM),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    hintText: 'e.g., Potatoes, Onions, etc.',
+                    filled: true,
+                    fillColor: AppTheme.backgroundLight,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingMD),
+
+                // Quantity & Unit
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Quantity',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimaryLight,
+                            ),
+                          ),
+                          const SizedBox(height: AppTheme.spacingSM),
+                          TextField(
+                            controller: quantityController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: InputDecoration(
+                              hintText: '1.0',
+                              filled: true,
+                              fillColor: AppTheme.backgroundLight,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppTheme.spacingMD),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Unit',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimaryLight,
+                            ),
+                          ),
+                          const SizedBox(height: AppTheme.spacingSM),
+                          TextField(
+                            controller: unitController,
+                            decoration: InputDecoration(
+                              hintText: 'kg',
+                              filled: true,
+                              fillColor: AppTheme.backgroundLight,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.spacingMD),
+
+                // Selling Price
+                Text(
+                  'Selling Price *',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimaryLight,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingSM),
+                TextField(
+                  controller: sellingPriceController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    hintText: '0.00',
+                    prefixText: '₹ ',
+                    filled: true,
+                    fillColor: AppTheme.backgroundLight,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingMD),
+
+                // Cost Price (Optional)
+                Text(
+                  'Cost Price (Optional)',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimaryLight,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingSM),
+                TextField(
+                  controller: costPriceController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    hintText: 'For profit tracking',
+                    prefixText: '₹ ',
+                    filled: true,
+                    fillColor: AppTheme.backgroundLight,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingMD),
+
+                // Notes
+                Text(
+                  'Notes (Optional)',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimaryLight,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingSM),
+                TextField(
+                  controller: notesController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    hintText: 'Any special notes...',
+                    filled: true,
+                    fillColor: AppTheme.backgroundLight,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingLG),
+
+                // Actions
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                          ),
+                          side: BorderSide(color: AppTheme.borderLight),
+                        ),
+                        child: Text(
+                          'cancel'.tr,
+                          style: TextStyle(color: AppTheme.textSecondaryLight),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppTheme.spacingMD),
+                    Expanded(
+                      flex: 2,
+                      child: GradientButton(
+                        label: 'Add Item',
+                        onPressed: () {
+                          if (nameController.text.isEmpty) {
+                            Get.snackbar('Error', 'Please enter item name');
+                            return;
+                          }
+                          final sellingPrice = double.tryParse(sellingPriceController.text);
+                          if (sellingPrice == null || sellingPrice <= 0) {
+                            Get.snackbar('Error', 'Please enter valid selling price');
+                            return;
+                          }
+
+                          final quantity = double.tryParse(quantityController.text) ?? 1.0;
+                          final costPrice = double.tryParse(costPriceController.text);
+
+                          controller.addCustomItem(
+                            itemName: nameController.text,
+                            quantity: quantity,
+                            sellingPrice: sellingPrice,
+                            costPrice: costPrice,
+                            unitSymbol: unitController.text.isEmpty ? 'kg' : unitController.text,
+                            notes: notesController.text.isEmpty ? null : notesController.text,
+                          );
+                          Get.back();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

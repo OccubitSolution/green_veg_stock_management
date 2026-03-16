@@ -13,6 +13,10 @@ class ProductsView extends GetView<ProductsController> {
 
   @override
   Widget build(BuildContext context) {
+    // Refresh products every time the view is built/opened
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.fetchData();
+    });
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       body: SafeArea(
@@ -38,7 +42,12 @@ class ProductsView extends GetView<ProductsController> {
                     icon: Icons.eco_outlined,
                     message: 'no_products_found'.tr,
                     actionLabel: 'add_product'.tr,
-                    onAction: () => Get.toNamed(AppRoutes.addProduct),
+                    onAction: () async {
+                      final result = await Get.toNamed(AppRoutes.addProduct);
+                      if (result == true) {
+                        controller.fetchData();
+                      }
+                    },
                   );
                 }
 
@@ -48,38 +57,6 @@ class ProductsView extends GetView<ProductsController> {
           ],
         ),
       ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          gradient: AppTheme.primaryGradient,
-          borderRadius: BorderRadius.circular(AppTheme.radiusLG),
-          boxShadow: AppTheme.coloredShadow(AppTheme.primaryColor),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => Get.toNamed(AppRoutes.addProduct),
-            borderRadius: BorderRadius.circular(AppTheme.radiusLG),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add_rounded, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text(
-                    'Add',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ).animate().scale(delay: 300.ms, curve: Curves.elasticOut),
     );
   }
 
@@ -94,7 +71,7 @@ class ProductsView extends GetView<ProductsController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title Row
+          // Title Row with Add Button
           Row(
             children: [
               Expanded(
@@ -105,6 +82,47 @@ class ProductsView extends GetView<ProductsController> {
                   ),
                 ),
               ),
+              // Add Product Button
+              Container(
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                  boxShadow: AppTheme.coloredShadow(AppTheme.primaryColor),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => Get.toNamed(AppRoutes.addProduct),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.add_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'add'.tr,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               // Stats Badge
               Obx(
                 () => Container(
@@ -212,7 +230,7 @@ class ProductsView extends GetView<ProductsController> {
         AppTheme.spacingMD,
         AppTheme.spacingMD,
         AppTheme.spacingMD,
-        120, // Space for FAB and bottom nav
+        100, // Space for bottom nav bar
       ),
       itemCount: controller.filteredProducts.length,
       itemBuilder: (context, index) {
@@ -224,18 +242,28 @@ class ProductsView extends GetView<ProductsController> {
 
   Widget _buildProductCard(BuildContext context, dynamic product, int index) {
     final iconColor = AppTheme.getCategoryColor(product.categoryId);
+    
+    // Get category name from the categories list
+    String categoryName = 'vegetables'.tr;
+    if (product.categoryId != null) {
+      final category = controller.categories.firstWhereOrNull(
+        (cat) => cat.id == product.categoryId,
+      );
+      if (category != null) {
+        categoryName = category.getName(lang);
+      }
+    }
 
     return ModernProductCard(
           name: product.getName(lang),
-          subtitle:
-              '${product.unitSymbol ?? 'kg'} • ${product.categoryId ?? 'vegetables'.tr}',
+          subtitle: '${product.unitSymbol ?? 'kg'} • $categoryName',
           price: product.currentPrice != null
               ? '₹${product.currentPrice}'
               : null,
           icon: Icons.eco,
           iconColor: iconColor,
           onTap: () {
-            // TODO: Navigate to product details
+            Get.toNamed(AppRoutes.productDetail, arguments: product.id);
           },
           trailing: Row(
             mainAxisSize: MainAxisSize.min,

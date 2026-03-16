@@ -28,8 +28,8 @@ class DailyPricesController extends GetxController {
   final products = <Product>[].obs;
   final filteredProducts = <Product>[].obs;
   final prices = <String, double>{}.obs;
-  final yesterdayPrices =
-      <String, double>{}.obs; // NEW: Track yesterday's prices
+  final yesterdayPrices = <String, double>{}.obs;
+  final hasChanges = false.obs;
 
   @override
   void onInit() {
@@ -111,6 +111,7 @@ class DailyPricesController extends GetxController {
       }
       prices.clear();
       yesterdayPrices.clear();
+      hasChanges.value = false;
 
       // Fetch prices for selected date and yesterday
       final results = await Future.wait([
@@ -176,6 +177,7 @@ class DailyPricesController extends GetxController {
     } else {
       prices.remove(productId);
     }
+    hasChanges.value = true;
   }
 
   void searchProducts(String query) {
@@ -239,6 +241,7 @@ class DailyPricesController extends GetxController {
 
       if (count > 0) {
         await fetchPricesForDate();
+        hasChanges.value = true;
         Get.snackbar(
           'success'.tr,
           'copied_prices'.trParams({'count': count.toString()}),
@@ -289,6 +292,7 @@ class DailyPricesController extends GetxController {
       );
 
       if (success) {
+        hasChanges.value = false;
         Get.snackbar(
           'success'.tr,
           'prices_saved'.tr,

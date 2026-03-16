@@ -19,17 +19,12 @@ class AuthController extends GetxController {
   final confirmPasswordController = TextEditingController();
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
+  final inviteCodeController = TextEditingController();
 
   // Observable States
   final isLoading = false.obs;
   final showPassword = false.obs;
   final currentLang = 'gu'.obs;
-
-  // PIN States
-  final pin = ''.obs;
-  final confirmPin = ''.obs;
-  final pinError = ''.obs;
-  final isConfirmingPin = false.obs;
 
   @override
   void onInit() {
@@ -44,6 +39,7 @@ class AuthController extends GetxController {
     confirmPasswordController.dispose();
     nameController.dispose();
     phoneController.dispose();
+    inviteCodeController.dispose();
     super.onClose();
   }
 
@@ -77,20 +73,31 @@ class AuthController extends GetxController {
       );
 
       if (vendor != null) {
+        String? userRole;
+        String? invitedBy;
+        String? inviterName;
+        
+        if (vendor.invitedBy != null) {
+          userRole = 'staff';
+          // Get inviter info
+          final inviter = await _authRepository.getVendor(vendor.invitedBy!);
+          if (inviter != null) {
+            invitedBy = inviter.id;
+            inviterName = inviter.name;
+          }
+        }
+        
         await _appController.setVendor(
           id: vendor.id,
           name: vendor.name,
           email: vendor.email,
+          userRole: userRole,
+          invitedBy: invitedBy,
+          inviterName: inviterName,
         );
 
-        // Check if PIN is set
-        final pinEnabled = vendor.settings['pin_enabled'] ?? false;
-        _storage.write('pin_enabled', pinEnabled);
-        if (pinEnabled) {
-          Get.offAllNamed(AppRoutes.pinLock);
-        } else {
-          Get.offAllNamed(AppRoutes.pinSetup);
-        }
+        // Navigate directly to dashboard (PIN removed)
+        Get.offAllNamed(AppRoutes.dashboard);
       } else {
         Get.snackbar(
           'error'.tr,
@@ -163,20 +170,61 @@ class AuthController extends GetxController {
         return;
       }
 
-      final vendor = await _authRepository.register(
-        email: emailController.text.trim(),
-        password: passwordController.text,
-        name: nameController.text.trim(),
-        phone: phoneController.text.trim(),
-      );
+      final inviteCode = inviteCodeController.text.trim();
+      dynamic vendor;
+
+      if (inviteCode.isNotEmpty) {
+        // Register with invite code (staff user)
+        vendor = await _authRepository.registerWithInvite(
+          email: emailController.text.trim(),
+          password: passwordController.text,
+          name: nameController.text.trim(),
+          phone: phoneController.text.trim(),
+          inviteCode: inviteCode,
+        );
+        if (vendor != null) {
+          Get.snackbar(
+            'success'.tr,
+            'staff_registered'.tr,
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.shade100,
+          );
+        }
+      } else {
+        // Normal registration (admin)
+        vendor = await _authRepository.register(
+          email: emailController.text.trim(),
+          password: passwordController.text,
+          name: nameController.text.trim(),
+          phone: phoneController.text.trim(),
+        );
+      }
 
       if (vendor != null) {
+        String? userRole;
+        String? invitedBy;
+        String? inviterName;
+        
+        if (inviteCode.isNotEmpty) {
+          // Get inviter info
+          final inviter = await _authRepository.getVendorByInviteCode(inviteCode);
+          userRole = 'staff';
+          if (inviter != null) {
+            invitedBy = inviter.id;
+            inviterName = inviter.name;
+          }
+        }
+        
         await _appController.setVendor(
           id: vendor.id,
           name: vendor.name,
           email: vendor.email,
+          userRole: userRole,
+          invitedBy: invitedBy,
+          inviterName: inviterName,
         );
-        Get.offAllNamed(AppRoutes.pinSetup);
+        // Navigate directly to dashboard (PIN removed)
+        Get.offAllNamed(AppRoutes.dashboard);
       } else {
         Get.snackbar(
           'error'.tr,
@@ -195,118 +243,5 @@ class AuthController extends GetxController {
     } finally {
       isLoading.value = false;
     }
-  }
-
-  // PIN Lock Methods
-  void addPinDigit(String digit) {
-    if (pin.value.length < 4) {
-      pin.value += digit;
-      pinError.value = '';
-
-      if (pin.value.length == 4) {
-        verifyPin();
-      }
-    }
-  }
-
-  void deletePin() {
-    if (pin.value.isNotEmpty) {
-      pin.value = pin.value.substring(0, pin.value.length - 1);
-    }
-  }
-
-  Future<void> verifyPin() async {
-    final vendorId = _storage.read('vendor_id');
-    if (vendorId == null) {
-      Get.offAllNamed(AppRoutes.login);
-      return;
-    }
-
-    final isValid = await _authRepository.verifyPin(vendorId, pin.value);
-
-    if (isValid) {
-      Get.offAllNamed(AppRoutes.dashboard);
-    } else {
-      pinError.value = 'invalid_pin'.tr;
-      pin.value = '';
-    }
-  }
-
-  // PIN Setup Methods
-  void addPinSetupDigit(String digit) {
-    if (!isConfirmingPin.value) {
-      if (pin.value.length < 4) {
-        pin.value += digit;
-        pinError.value = '';
-
-        if (pin.value.length == 4) {
-          isConfirmingPin.value = true;
-        }
-      }
-    } else {
-      if (confirmPin.value.length < 4) {
-        confirmPin.value += digit;
-        pinError.value = '';
-
-        if (confirmPin.value.length == 4) {
-          savePin();
-        }
-      }
-    }
-  }
-
-  void deletePinSetup() {
-    if (isConfirmingPin.value) {
-      if (confirmPin.value.isNotEmpty) {
-        confirmPin.value = confirmPin.value.substring(
-          0,
-          confirmPin.value.length - 1,
-        );
-      } else {
-        isConfirmingPin.value = false;
-        pin.value = '';
-      }
-    } else {
-      if (pin.value.isNotEmpty) {
-        pin.value = pin.value.substring(0, pin.value.length - 1);
-      }
-    }
-  }
-
-  Future<void> savePin() async {
-    if (pin.value != confirmPin.value) {
-      pinError.value = 'pin_mismatch'.tr;
-      confirmPin.value = '';
-      return;
-    }
-
-    final vendorId = _storage.read('vendor_id');
-    if (vendorId == null) {
-      Get.offAllNamed(AppRoutes.login);
-      return;
-    }
-
-    final success = await _authRepository.setPin(vendorId, pin.value);
-
-    if (success) {
-      _storage.write('pin_enabled', true);
-      Get.snackbar(
-        'success'.tr,
-        'pin_set_success'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.shade100,
-      );
-      Get.offAllNamed(AppRoutes.dashboard);
-    } else {
-      pinError.value = 'something_went_wrong'.tr;
-      resetPinSetup();
-    }
-  }
-
-  void resetPinSetup() {
-    pin.value = '';
-    confirmPin.value = '';
-    isConfirmingPin.value = false;
-    pinError.value = '';
   }
 }

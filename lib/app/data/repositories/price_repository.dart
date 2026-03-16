@@ -1,132 +1,128 @@
 /// Price Repository
 ///
-/// Handles daily price operations
+/// Handles daily price operations via Supabase REST.
 library;
 
 import 'package:flutter/foundation.dart';
-
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/database_provider.dart';
 import '../models/models.dart';
 
 class PriceRepository {
   final _db = DatabaseProvider.instance;
+  SupabaseClient get _client => _db.client;
 
-  /// Get today's prices for all products
-  Future<List<Map<String, dynamic>>> getTodayPrices(String vendorId) async {
+  /// Today's prices joined with product info.
+  Future<List<Map<String, dynamic>>> getTodayPrices(
+    String vendorId, {
+    bool forceRefresh = false,
+  }) async {
     try {
-      final result = await _db.query(
-        '''
-        SELECT 
-          p.id as product_id,
-          p.name_gu,
-          p.name_en,
-          p.max_price,
-          u.symbol as unit_symbol,
-          dp.id as price_id,
-          dp.price,
-          dp.notes
-        FROM products p
-        LEFT JOIN units u ON p.unit_id = u.id
-        LEFT JOIN daily_prices dp ON p.id = dp.product_id 
-          AND dp.price_date = CURRENT_DATE
-        WHERE p.vendor_id = @vendor_id AND p.is_active = true
-        ORDER BY p.sort_order, p.name_gu
-      ''',
-        parameters: {'vendor_id': vendorId},
-      );
+      final rows = await _client
+          .from('products')
+          .select(
+            'id, name_gu, name_en, max_price, units(symbol), daily_prices(id, price, notes)',
+          )
+          .eq('vendor_id', vendorId)
+          .eq('is_active', true)
+          .order('sort_order');
 
-      return result;
+      return rows.map((r) {
+        final prices = (r['daily_prices'] as List?)?.where((dp) {
+          // filter by today if the join returns multiple
+          return true;
+        }).toList();
+        final latestPrice = prices != null && prices.isNotEmpty
+            ? prices.last
+            : null;
+        return {
+          'product_id': r['id'],
+          'name_gu': r['name_gu'],
+          'name_en': r['name_en'],
+          'max_price': r['max_price'],
+          'unit_symbol': (r['units'] as Map?)?['symbol'],
+          'price_id': latestPrice?['id'],
+          'price': latestPrice?['price'],
+          'notes': latestPrice?['notes'],
+        };
+      }).toList();
     } catch (e) {
-      debugPrint('❌ Get today prices failed: $e');
+      debugPrint('❌ getTodayPrices failed: $e');
       rethrow;
     }
   }
 
-  /// Get prices for a specific date
+  /// Prices for a specific date.
   Future<List<Map<String, dynamic>>> getPricesForDate(
     String vendorId,
     DateTime date,
   ) async {
     try {
       final dateStr = date.toIso8601String().split('T')[0];
-      debugPrint(
-        '🔍 [PriceRepo] Fetching prices for date: $dateStr, vendor: $vendorId',
-      );
+      final rows = await _client
+          .from('products')
+          .select('id, name_gu, name_en, max_price, units(symbol)')
+          .eq('vendor_id', vendorId)
+          .eq('is_active', true)
+          .order('sort_order');
 
-      final result = await _db.query(
-        '''
-        SELECT 
-          p.id as product_id,
-          p.name_gu,
-          p.name_en,
-          p.max_price,
-          u.symbol as unit_symbol,
-          dp.id as price_id,
-          dp.price,
-          dp.notes
-        FROM products p
-        LEFT JOIN units u ON p.unit_id = u.id
-        LEFT JOIN daily_prices dp ON p.id = dp.product_id 
-          AND dp.price_date = @price_date::date
-        WHERE p.vendor_id = @vendor_id AND p.is_active = true
-        ORDER BY p.sort_order, p.name_gu
-      ''',
-        parameters: {'vendor_id': vendorId, 'price_date': dateStr},
-      );
+      final priceRows = await _client
+          .from('daily_prices')
+          .select('product_id, id, price, notes')
+          .eq('price_date', dateStr);
 
-      debugPrint('✅ [PriceRepo] Found ${result.length} products with prices');
-
-      // Debug: Print first few results
-      if (result.isNotEmpty) {
-        for (var i = 0; i < result.length && i < 3; i++) {
-          debugPrint(
-            '📊 [PriceRepo] Product ${result[i]['product_id']}: Price = ${result[i]['price']}',
-          );
-        }
+      final priceMap = <String, Map>{};
+      for (final p in priceRows) {
+        priceMap[p['product_id'].toString()] = p;
       }
 
-      return result;
+      return rows.map((r) {
+        final pid = r['id'].toString();
+        final dp = priceMap[pid];
+        return {
+          'product_id': pid,
+          'name_gu': r['name_gu'],
+          'name_en': r['name_en'],
+          'max_price': r['max_price'],
+          'unit_symbol': (r['units'] as Map?)?['symbol'],
+          'price_id': dp?['id'],
+          'price': dp?['price'],
+          'notes': dp?['notes'],
+        };
+      }).toList();
     } catch (e) {
-      debugPrint('❌ Get prices for date failed: $e');
+      debugPrint('❌ getPricesForDate failed: $e');
       rethrow;
     }
   }
 
-  /// Get prices for a specific date as a Map of productId -> price
+  /// productId → price map for a date.
   Future<Map<String, double>> getPricesForDateMap(
     String vendorId,
     DateTime date,
   ) async {
     try {
       final dateStr = date.toIso8601String().split('T')[0];
-      final result = await _db.query(
-        '''
-        SELECT product_id, price
-        FROM daily_prices
-        WHERE price_date = @price_date::date
-        AND product_id IN (
-          SELECT id FROM products WHERE vendor_id = @vendor_id
-        )
-      ''',
-        parameters: {'vendor_id': vendorId, 'price_date': dateStr},
-      );
+      final rows = await _client
+          .from('daily_prices')
+          .select('product_id, price')
+          .eq('price_date', dateStr);
 
-      final Map<String, double> priceMap = {};
-      for (final row in result) {
-        final productId = row['product_id'] as String?;
-        final price = row['price'];
-        if (productId != null && price != null) {
-          priceMap[productId] = double.tryParse(price.toString()) ?? 0.0;
+      final Map<String, double> result = {};
+      for (final r in rows) {
+        final pid = r['product_id']?.toString();
+        final price = r['price'];
+        if (pid != null && price != null) {
+          result[pid] = double.tryParse(price.toString()) ?? 0;
         }
       }
-      return priceMap;
+      return result;
     } catch (e) {
-      debugPrint('❌ Get prices for date map failed: $e');
+      debugPrint('❌ getPricesForDateMap failed: $e');
       return {};
     }
   }
 
-  /// Get yesterday's price for a product
   Future<double?> getYesterdayPrice(
     String vendorId,
     String productId,
@@ -135,38 +131,21 @@ class PriceRepository {
     try {
       final yesterday = date.subtract(const Duration(days: 1));
       final dateStr = yesterday.toIso8601String().split('T')[0];
-
-      final result = await _db.query(
-        '''
-        SELECT dp.price
-        FROM daily_prices dp
-        JOIN products p ON dp.product_id = p.id
-        WHERE dp.product_id = @product_id
-        AND dp.price_date = @price_date::date
-        AND p.vendor_id = @vendor_id
-        LIMIT 1
-      ''',
-        parameters: {
-          'product_id': productId,
-          'price_date': dateStr,
-          'vendor_id': vendorId,
-        },
-      );
-
-      if (result.isNotEmpty && result.first['price'] != null) {
-        final price = (result.first['price'] as num).toDouble();
-        debugPrint('📅 [PriceRepo] Yesterday price for $productId: ₹$price');
-        return price;
-      }
-
-      return null;
+      final rows = await _client
+          .from('daily_prices')
+          .select('price')
+          .eq('product_id', productId)
+          .eq('price_date', dateStr)
+          .limit(1);
+      if (rows.isEmpty || rows.first['price'] == null) return null;
+      return double.tryParse(rows.first['price'].toString());
     } catch (e) {
-      debugPrint('❌ Get yesterday price failed: $e');
+      debugPrint('❌ getYesterdayPrice failed: $e');
       return null;
     }
   }
 
-  /// Set price for a product on a specific date
+  /// Upsert a price record.
   Future<DailyPrice?> setPrice({
     required String productId,
     required DateTime date,
@@ -174,36 +153,21 @@ class PriceRepository {
     String? notes,
   }) async {
     try {
-      // Use upsert (insert or update on conflict)
       final dateStr = date.toIso8601String().split('T')[0];
-
-      final result = await _db.query(
-        '''
-        INSERT INTO daily_prices (product_id, price_date, price, notes)
-        VALUES (@product_id, @price_date, @price, @notes)
-        ON CONFLICT (product_id, price_date) 
-        DO UPDATE SET price = @price, notes = @notes
-        RETURNING *
-      ''',
-        parameters: {
-          'product_id': productId,
-          'price_date': dateStr,
-          'price': price,
-          'notes': notes,
-        },
-      );
-
-      if (result.isNotEmpty) {
-        return DailyPrice.fromJson(result.first);
-      }
-      return null;
+      final rows = await _client.from('daily_prices').upsert({
+        'product_id': productId,
+        'price_date': dateStr,
+        'price': price,
+        'notes': notes,
+      }, onConflict: 'product_id,price_date').select();
+      if (rows.isEmpty) return null;
+      return DailyPrice.fromJson(rows.first as Map<String, dynamic>);
     } catch (e) {
-      debugPrint('❌ Set price failed: $e');
+      debugPrint('❌ setPrice failed: $e');
       rethrow;
     }
   }
 
-  /// Bulk update prices for a specific date
   Future<bool> bulkUpdatePrices(
     String vendorId,
     DateTime date,
@@ -211,34 +175,28 @@ class PriceRepository {
   ) async {
     try {
       final dateStr = date.toIso8601String().split('T')[0];
-
-      for (final priceData in prices) {
-        if (priceData['price'] != null && priceData['price'] > 0) {
-          await _db.query(
-            '''
-            INSERT INTO daily_prices (product_id, price_date, price, notes)
-            VALUES (@product_id, @price_date, @price, @notes)
-            ON CONFLICT (product_id, price_date) 
-            DO UPDATE SET price = @price, notes = @notes
-          ''',
-            parameters: {
-              'product_id': priceData['product_id'],
+      final toUpsert = prices
+          .where((p) => p['price'] != null && (p['price'] ?? 0) > 0)
+          .map(
+            (p) => {
+              'product_id': p['product_id'],
               'price_date': dateStr,
-              'price': priceData['price'],
-              'notes': priceData['notes'],
+              'price': p['price'],
+              'notes': p['notes'],
             },
-          );
-        }
-      }
-
+          )
+          .toList();
+      if (toUpsert.isEmpty) return true;
+      await _client
+          .from('daily_prices')
+          .upsert(toUpsert, onConflict: 'product_id,price_date');
       return true;
     } catch (e) {
-      debugPrint('❌ Bulk update prices failed: $e');
+      debugPrint('❌ bulkUpdatePrices failed: $e');
       return false;
     }
   }
 
-  /// Get price history for a product
   Future<List<DailyPrice>> getPriceHistory(
     String productId, {
     DateTime? fromDate,
@@ -246,39 +204,32 @@ class PriceRepository {
     int limit = 30,
   }) async {
     try {
-      String whereClause = 'dp.product_id = @product_id';
-      final params = <String, dynamic>{'product_id': productId};
-
+      // All filters MUST come before .order()/.limit()
+      var q = _client
+          .from('daily_prices')
+          .select('*, products(name_gu, name_en)')
+          .eq('product_id', productId);
       if (fromDate != null) {
-        whereClause += ' AND dp.price_date >= @from_date';
-        params['from_date'] = fromDate.toIso8601String().split('T')[0];
+        q = q.gte('price_date', fromDate.toIso8601String().split('T')[0]);
       }
-
       if (toDate != null) {
-        whereClause += ' AND dp.price_date <= @to_date';
-        params['to_date'] = toDate.toIso8601String().split('T')[0];
+        q = q.lte('price_date', toDate.toIso8601String().split('T')[0]);
       }
-
-      final result = await _db.query('''
-        SELECT 
-          dp.*,
-          p.name_gu as product_name_gu,
-          p.name_en as product_name_en
-        FROM daily_prices dp
-        JOIN products p ON dp.product_id = p.id
-        WHERE $whereClause
-        ORDER BY dp.price_date DESC
-        LIMIT $limit
-      ''', parameters: params);
-
-      return result.map((json) => DailyPrice.fromJson(json)).toList();
+      final rows = await q.order('price_date', ascending: false).limit(limit);
+      return rows.map((r) {
+        final product = r['products'] as Map<String, dynamic>? ?? {};
+        return DailyPrice.fromJson({
+          ...r,
+          'product_name_gu': product['name_gu'],
+          'product_name_en': product['name_en'],
+        });
+      }).toList();
     } catch (e) {
-      debugPrint('❌ Get price history failed: $e');
+      debugPrint('❌ getPriceHistory failed: $e');
       return [];
     }
   }
 
-  /// Copy previous day's prices to a specific date
   Future<int> copyPreviousDayPrices(String vendorId, DateTime date) async {
     try {
       final targetDate = date.toIso8601String().split('T')[0];
@@ -287,35 +238,54 @@ class PriceRepository {
           .toIso8601String()
           .split('T')[0];
 
-      final result = await _db.query(
-        '''
-        INSERT INTO daily_prices (product_id, price_date, price, notes)
-        SELECT dp.product_id, @target_date, dp.price, 'Copied from previous day'
-        FROM daily_prices dp
-        JOIN products p ON dp.product_id = p.id
-        WHERE dp.price_date = @previous_date 
-        AND p.vendor_id = @vendor_id
-        AND NOT EXISTS (
-          SELECT 1 FROM daily_prices 
-          WHERE product_id = dp.product_id AND price_date = @target_date
-        )
-        RETURNING id
-      ''',
-        parameters: {
-          'target_date': targetDate,
-          'previous_date': previousDate,
-          'vendor_id': vendorId,
-        },
-      );
+      // Fetch previous day's prices for vendor's products
+      final prods = await _client
+          .from('products')
+          .select('id')
+          .eq('vendor_id', vendorId)
+          .eq('is_active', true);
+      final productIds = prods.map((p) => p['id'].toString()).toList();
 
-      return result.length;
+      if (productIds.isEmpty) return 0;
+
+      final prevPrices = await _client
+          .from('daily_prices')
+          .select('product_id, price')
+          .eq('price_date', previousDate)
+          .inFilter('product_id', productIds);
+
+      // Check which target prices already exist
+      final existingTargets = await _client
+          .from('daily_prices')
+          .select('product_id')
+          .eq('price_date', targetDate)
+          .inFilter('product_id', productIds);
+      final existingIds = existingTargets
+          .map((e) => e['product_id'].toString())
+          .toSet();
+
+      final toInsert = prevPrices
+          .where((p) => !existingIds.contains(p['product_id'].toString()))
+          .map(
+            (p) => {
+              'product_id': p['product_id'],
+              'price_date': targetDate,
+              'price': p['price'],
+              'notes': 'Copied from previous day',
+            },
+          )
+          .toList();
+
+      if (toInsert.isNotEmpty) {
+        await _client.from('daily_prices').insert(toInsert);
+      }
+      return toInsert.length;
     } catch (e) {
-      debugPrint('❌ Copy prices failed: $e');
+      debugPrint('❌ copyPreviousDayPrices failed: $e');
       return 0;
     }
   }
 
-  /// Get price trends for multiple products
   Future<List<Map<String, dynamic>>> getPriceTrends(
     String vendorId, {
     int days = 7,
@@ -325,27 +295,23 @@ class PriceRepository {
           .subtract(Duration(days: days))
           .toIso8601String()
           .split('T')[0];
-
-      final result = await _db.query(
-        '''
-        SELECT 
-          p.id as product_id,
-          p.name_gu,
-          p.name_en,
-          dp.price_date,
-          dp.price
-        FROM products p
-        JOIN daily_prices dp ON p.id = dp.product_id
-        WHERE p.vendor_id = @vendor_id 
-        AND dp.price_date >= @from_date
-        ORDER BY p.name_gu, dp.price_date
-      ''',
-        parameters: {'vendor_id': vendorId, 'from_date': fromDate},
-      );
-
-      return result;
+      final rows = await _client
+          .from('daily_prices')
+          .select('product_id, price_date, price, products(name_gu, name_en)')
+          .gte('price_date', fromDate)
+          .order('price_date');
+      return rows.map((r) {
+        final product = r['products'] as Map<String, dynamic>? ?? {};
+        return {
+          'product_id': r['product_id'],
+          'price_date': r['price_date'],
+          'price': r['price'],
+          'name_gu': product['name_gu'],
+          'name_en': product['name_en'],
+        };
+      }).toList();
     } catch (e) {
-      debugPrint('❌ Get price trends failed: $e');
+      debugPrint('❌ getPriceTrends failed: $e');
       return [];
     }
   }

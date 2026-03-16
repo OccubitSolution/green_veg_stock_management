@@ -1,43 +1,53 @@
+import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:green_veg_stock_management/app/data/models/customer_order_models.dart';
 import 'package:green_veg_stock_management/app/data/providers/database_provider.dart';
 
-/// Customer Repository
-/// Handles all database operations for customers
+/// Customer Repository – all database operations for customers via Supabase REST.
 class CustomerRepository {
   final DatabaseProvider _db = DatabaseProvider.instance;
+  SupabaseClient get _client => _db.client;
 
-  /// Get all customers for a vendor
   Future<List<Customer>> getCustomers(
     String vendorId, {
     bool activeOnly = true,
-  }) async {
-    String query =
-        '''
-      SELECT * FROM customers 
-      WHERE vendor_id = @vendorId
-      ${activeOnly ? 'AND is_active = true' : ''}
-      ORDER BY name ASC
-    ''';
+    bool forceRefresh = false,
+  }) async {  
+    try {
+      var q = _client.from('customers').select().eq('vendor_id', vendorId);
+      if (activeOnly) q = q.eq('is_active', true);
 
-    final result = await _db.query(query, parameters: {'vendorId': vendorId});
-
-    return result.map((row) => Customer.fromJson(row)).toList();
+      final rows = await q;
+      final customers = rows
+          .map((r) => Customer.fromJson(r as Map<String, dynamic>))
+          .toList();
+      customers.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
+      return customers;
+    } catch (e) {
+      debugPrint('❌ getCustomers failed: $e');
+      return [];
+    }
   }
 
-  /// Get customer by ID
   Future<Customer?> getCustomerById(String id) async {
-    final result = await _db.query(
-      'SELECT * FROM customers WHERE id = @id',
-      parameters: {'id': id},
-    );
-
-    if (result.isEmpty) return null;
-    return Customer.fromJson(result.first);
+    try {
+      final rows = await _client
+          .from('customers')
+          .select()
+          .eq('id', id)
+          .limit(1);
+      if (rows.isEmpty) return null;
+      return Customer.fromJson(rows.first as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('❌ getCustomerById failed: $e');
+      return null;
+    }
   }
 
-  /// Create new customer
   Future<Customer> createCustomer(Customer customer) async {
-    final data = {
+    final result = await _db.insert('customers', {
       'vendor_id': customer.vendorId,
       'name': customer.name,
       'contact_person': customer.contactPerson,
@@ -47,71 +57,73 @@ class CustomerRepository {
       'type': customer.type.value,
       'notes': customer.notes,
       'is_active': customer.isActive,
-    };
-
-    final result = await _db.insert('customers', data);
+    });
     return Customer.fromJson(result!);
   }
 
-  /// Update customer
   Future<Customer> updateCustomer(Customer customer) async {
-    final data = {
-      'name': customer.name,
-      'contact_person': customer.contactPerson,
-      'phone': customer.phone,
-      'email': customer.email,
-      'address': customer.address,
-      'type': customer.type.value,
-      'notes': customer.notes,
-      'is_active': customer.isActive,
-    };
-
     final result = await _db.update(
       'customers',
-      data,
-      where: 'id = @id',
-      whereParams: {'id': customer.id},
+      {
+        'name': customer.name,
+        'contact_person': customer.contactPerson,
+        'phone': customer.phone,
+        'email': customer.email,
+        'address': customer.address,
+        'type': customer.type.value,
+        'notes': customer.notes,
+        'is_active': customer.isActive,
+      },
+      match: {'id': customer.id},
     );
-
     return Customer.fromJson(result.first);
   }
 
-  /// Soft delete customer (set is_active = false)
   Future<void> deleteCustomer(String id) async {
-    await _db.softDelete(
-      'customers',
-      where: 'id = @id',
-      whereParams: {'id': id},
-    );
+    await _db.softDelete('customers', match: {'id': id});
   }
 
-  /// Search customers by name or phone
   Future<List<Customer>> searchCustomers(String vendorId, String query) async {
-    final result = await _db.query(
-      '''
-      SELECT * FROM customers 
-      WHERE vendor_id = @vendorId 
-      AND is_active = true
-      AND (
-        name ILIKE @query 
-        OR phone ILIKE @query 
-        OR contact_person ILIKE @query
-      )
-      ORDER BY name ASC
-    ''',
-      parameters: {'vendorId': vendorId, 'query': '%$query%'},
-    );
+    try {
+      final rows = await _client
+          .from('customers')
+          .select()
+          .eq('vendor_id', vendorId)
+          .eq('is_active', true);
 
-    return result.map((row) => Customer.fromJson(row)).toList();
+      final s = query.toLowerCase();
+      final all = rows
+          .map((r) => Customer.fromJson(r as Map<String, dynamic>))
+          .toList();
+      final filtered = all
+          .where(
+            (c) =>
+                c.name.toLowerCase().contains(s) ||
+                (c.phone?.toLowerCase().contains(s) ?? false) ||
+                (c.contactPerson?.toLowerCase().contains(s) ?? false),
+          )
+          .toList();
+      filtered.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
+      return filtered;
+    } catch (e) {
+      debugPrint('❌ searchCustomers failed: $e');
+      return [];
+    }
   }
 
-  /// Get customer count
   Future<int> getCustomerCount(String vendorId) async {
-    final result = await _db.query(
-      'SELECT COUNT(*) as count FROM customers WHERE vendor_id = @vendorId AND is_active = true',
-      parameters: {'vendorId': vendorId},
-    );
-
-    return int.parse(result.first['count'].toString());
+    try {
+      final rows = await _client
+          .from('customers')
+          .select('id')
+          .eq('vendor_id', vendorId)
+          .eq('is_active', true);
+      return rows.length;
+    } catch (e) {
+      debugPrint('❌ getCustomerCount failed: $e');
+      return 0;
+    }
   }
 }

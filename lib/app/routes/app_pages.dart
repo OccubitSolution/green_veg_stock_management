@@ -11,8 +11,6 @@ import '../modules/splash/splash_binding.dart';
 // Auth
 import '../modules/auth/views/login_view.dart';
 import '../modules/auth/views/register_view.dart';
-import '../modules/auth/views/pin_lock_view.dart';
-import '../modules/auth/views/pin_setup_view.dart';
 import '../modules/auth/bindings/auth_binding.dart';
 
 // Home
@@ -37,6 +35,8 @@ import '../modules/reports/bindings/reports_binding.dart';
 
 // Products
 import '../modules/products/views/products_view.dart';
+import '../modules/products/views/add_product_view.dart';
+import '../modules/products/views/product_detail_view.dart';
 import '../modules/products/bindings/products_binding.dart';
 
 // Customers
@@ -45,6 +45,7 @@ import '../modules/customers/bindings/customer_binding.dart';
 
 // Orders
 import '../modules/orders/views/orders_view.dart';
+import '../modules/orders/views/simple_orders_view.dart';
 import '../modules/orders/views/purchase_list_view.dart';
 import '../modules/orders/bindings/order_binding.dart';
 
@@ -73,18 +74,6 @@ class AppPages {
       binding: AuthBinding(),
       transition: Transition.rightToLeft,
     ),
-    GetPage(
-      name: AppRoutes.pinLock,
-      page: () => const PinLockView(),
-      binding: AuthBinding(),
-      transition: Transition.fadeIn,
-    ),
-    GetPage(
-      name: AppRoutes.pinSetup,
-      page: () => const PinSetupView(),
-      binding: AuthBinding(),
-      transition: Transition.rightToLeft,
-    ),
 
     // Dashboard (Main Shell)
     GetPage(
@@ -106,13 +95,18 @@ class AppPages {
       binding: ProductsBinding(),
       transition: Transition.rightToLeft,
     ),
-    // TODO: Implement Add Product Page
-    // GetPage(
-    //   name: AppRoutes.addProduct,
-    //   page: () => const AddProductView(),
-    //   binding: ProductsBinding(),
-    //   transition: Transition.rightToLeft,
-    // ),
+    GetPage(
+      name: AppRoutes.addProduct,
+      page: () => const AddProductView(),
+      binding: ProductFormBinding(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: AppRoutes.productDetail,
+      page: () => ProductDetailView(productId: Get.arguments),
+      binding: ProductsBinding(),
+      transition: Transition.rightToLeft,
+    ),
 
     // Daily Prices
     GetPage(
@@ -154,6 +148,14 @@ class AppPages {
       transition: Transition.rightToLeft,
     ),
 
+    // Add Order (Direct bill creation - bypasses bill list)
+    GetPage(
+      name: AppRoutes.addOrder,
+      page: () => const SimpleOrdersView(),
+      binding: OrderBinding(),
+      transition: Transition.rightToLeft,
+    ),
+
     // Sales (kept for backward compatibility)
     GetPage(
       name: AppRoutes.sales,
@@ -162,17 +164,17 @@ class AppPages {
       transition: Transition.rightToLeft,
     ),
 
-    // Purchase List
+    // Simple Order Creation
     GetPage(
-      name: '/purchase-list',
-      page: () => const PurchaseListView(),
+      name: AppRoutes.simpleOrder,
+      page: () => const SimpleOrdersView(),
       binding: OrderBinding(),
       transition: Transition.rightToLeft,
     ),
 
-    // Purchases (quick action from home)
+    // Purchase List (aggregated orders)
     GetPage(
-      name: AppRoutes.purchases,
+      name: AppRoutes.purchaseList,
       page: () => const PurchaseListView(),
       binding: OrderBinding(),
       transition: Transition.rightToLeft,

@@ -8,13 +8,10 @@ class AppConstants {
   static const String appName = 'GreenVeg';
   static const String appVersion = '1.0.0';
 
-  // Database - Neon PostgreSQL
-  static const String dbHost =
-      'ep-soft-poetry-a1s2z589-pooler.ap-southeast-1.aws.neon.tech';
-  static const int dbPort = 5432;
-  static const String dbName = 'neondb';
-  static const String dbUser = 'neondb_owner';
-  static const String dbPassword = 'npg_e41YusPpUajO';
+  // Database - Supabase REST API
+  static const String supabaseUrl = 'https://ncxzouaovurdiwvcuuqk.supabase.co';
+  static const String supabaseAnonKey =
+      'sb_publishable_kARHb543GwleTISaqPXmhQ_s0Ohhy2k';
 
   // Storage Keys
   static const String keyLanguage = 'language';
