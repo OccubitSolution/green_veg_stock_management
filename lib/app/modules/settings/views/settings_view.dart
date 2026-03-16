@@ -440,14 +440,16 @@ class SettingsView extends GetView<SettingsController> {
                 color: AppTheme.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppTheme.radiusRound),
               ),
-              child: const Text(
-                '1.0.0',
-                style: TextStyle(
+              child: Obx(() => Text(
+                controller.appVersion.value.isEmpty
+                    ? '...'
+                    : 'v${controller.appVersion.value}',
+                style: const TextStyle(
                   color: AppTheme.primaryColor,
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
                 ),
-              ),
+              )),
             ),
           ),
           Divider(

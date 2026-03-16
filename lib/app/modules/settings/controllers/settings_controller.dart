@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../controllers/app_controller.dart';
 import '../../../data/repositories/auth_repository.dart';
@@ -20,12 +21,19 @@ class SettingsController extends GetxController {
   final currentLang = 'gu'.obs;
   final darkMode = false.obs;
   final inviteCode = ''.obs;
+  final appVersion = ''.obs;
 
   @override
   void onInit() {
     super.onInit();
     _loadSettings();
     loadInviteCode();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    appVersion.value = info.version;
   }
 
   void _loadSettings() {
