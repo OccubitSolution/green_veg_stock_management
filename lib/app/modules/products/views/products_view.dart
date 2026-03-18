@@ -172,29 +172,30 @@ class ProductsView extends GetView<ProductsController> {
   }
 
   Widget _buildCategoryFilters(BuildContext context) {
-    return SizedBox(
-      height: 50,
-      child: Obx(
-        () => ListView.builder(
+    return Obx(() {
+      final selectedCat = controller.selectedCategory.value;
+      final cats = controller.categories;
+      return SizedBox(
+        height: 50,
+        child: ListView.builder(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
-          itemCount: controller.categories.length + 1, // +1 for "All"
+          itemCount: cats.length + 1, // +1 for "All"
           itemBuilder: (context, index) {
             if (index == 0) {
-              // "All" filter
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: ModernFilterChip(
                   label: 'all'.tr,
-                  isSelected: controller.selectedCategory.value.isEmpty,
+                  isSelected: selectedCat.isEmpty,
                   icon: Icons.grid_view_rounded,
                   onSelected: () => controller.filterByCategory(''),
                 ),
               );
             }
 
-            final category = controller.categories[index - 1];
-            final isSelected = controller.selectedCategory.value == category.id;
+            final category = cats[index - 1];
+            final isSelected = selectedCat == category.id;
             final color = AppTheme.getCategoryColor(category.id);
 
             return Padding(
@@ -209,8 +210,8 @@ class ProductsView extends GetView<ProductsController> {
             );
           },
         ),
-      ),
-    ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1);
+      );
+    });
   }
 
   IconData _getCategoryIcon(String? categoryId) {

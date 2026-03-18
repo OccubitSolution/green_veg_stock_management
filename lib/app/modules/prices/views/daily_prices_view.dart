@@ -21,75 +21,18 @@ class DailyPricesView extends GetView<DailyPricesController> {
           _buildHeader(context),
 
           // Compact Search Bar
-          Container(
-            margin: const EdgeInsets.fromLTRB(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
               AppTheme.spacingMD,
               AppTheme.spacingXS,
               AppTheme.spacingMD,
               AppTheme.spacingXS,
             ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spacingSM,
-              vertical: AppTheme.spacingXS,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppTheme.radiusLG),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-              border: Border.all(
-                color: AppTheme.primaryColor.withValues(alpha: 0.2),
-                width: 1.5,
-              ),
-            ),
-            child: TextField(
+            child: ModernSearchBar(
               controller: controller.searchController,
+              hintText: 'search_products'.tr,
               onChanged: controller.searchProducts,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-              decoration: InputDecoration(
-                hintText: 'search_products'.tr,
-                hintStyle: TextStyle(
-                  color: AppTheme.textTertiaryLight,
-                  fontSize: 14,
-                ),
-                filled: false,
-                prefixIcon: const Icon(
-                  Icons.search_rounded,
-                  color: AppTheme.primaryColor,
-                  size: 20,
-                ),
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: 36,
-                  minHeight: 36,
-                ),
-                suffixIcon: Obx(() {
-                  if (controller.searchQuery.value.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
-                  return IconButton(
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      color: AppTheme.textSecondaryLight,
-                      size: 18,
-                    ),
-                    onPressed: controller.clearSearch,
-                  );
-                }),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 8,
-                ),
-              ),
+              onClear: controller.clearSearch,
             ),
           ).animate().fadeIn(delay: 200.ms),
 

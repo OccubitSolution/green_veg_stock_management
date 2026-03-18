@@ -467,7 +467,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
           ElevatedButton.icon(
             onPressed: () => Get.toNamed('/orders'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00695C),
+              backgroundColor: AppTheme.primaryDark,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(
                 horizontal: _spacingLG,
@@ -527,12 +527,12 @@ class _PurchaseListViewState extends State<PurchaseListView> {
         decoration: BoxDecoration(
           color: isSelected 
               ? AppTheme.primaryColor.withValues(alpha: 0.1)
-              : isPurchased ? Colors.green[50] : Colors.white,
+              : isPurchased ? AppTheme.successLight : Colors.white,
           borderRadius: BorderRadius.circular(_cardBorderRadius),
           border: Border.all(
             color: isSelected 
                 ? AppTheme.primaryColor 
-                : isPurchased ? Colors.green[300]! : Colors.grey[200]!,
+                : isPurchased ? AppTheme.success.withValues(alpha: 0.5) : AppTheme.borderLight,
             width: isSelected ? 1.5 : 1,
           ),
           boxShadow: [
@@ -580,7 +580,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
-                              color: isPurchased ? Colors.grey[600] : AppTheme.textPrimaryLight,
+                              color: isPurchased ? AppTheme.textSecondaryLight : AppTheme.textPrimaryLight,
                               decoration: isPurchased ? TextDecoration.lineThrough : null,
                             ),
                             maxLines: 1,
@@ -592,7 +592,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: isPurchased 
-                              ? Colors.green.withValues(alpha: 0.15)
+                              ? AppTheme.success.withValues(alpha: 0.15)
                               : AppTheme.primaryColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
                           ),
@@ -601,7 +601,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: isPurchased ? Colors.green[700] : AppTheme.primaryColor,
+                              color: isPurchased ? AppTheme.success : AppTheme.primaryColor,
                             ),
                           ),
                         ),
@@ -612,7 +612,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
                       breakdownText,
                       style: TextStyle(
                         fontSize: 11,
-                        color: isPurchased ? Colors.grey[500] : Colors.grey[600],
+                        color: isPurchased ? AppTheme.textTertiaryLight : AppTheme.textSecondaryLight,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -628,7 +628,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
                   onPressed: () => _togglePurchased(item.productId, isPurchased),
                   icon: Icon(
                     isPurchased ? Icons.check_circle : Icons.circle_outlined,
-                    color: isPurchased ? Colors.green : Colors.grey[400],
+                    color: isPurchased ? AppTheme.success : AppTheme.textTertiaryLight,
                     size: 26,
                   ),
                   padding: EdgeInsets.zero,
@@ -679,7 +679,7 @@ class _PurchaseListViewState extends State<PurchaseListView> {
                   child: ElevatedButton.icon(
                     onPressed: _markSelectedAsPurchased,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[700],
+                      backgroundColor: AppTheme.success,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
