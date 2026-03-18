@@ -4,6 +4,6 @@ import 'package:green_veg_stock_management/app/modules/orders/controllers/order_
 class OrderBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<OrderController>(() => OrderController());
+    Get.lazyPut<OrderController>(() => OrderController(), fenix: true);
   }
 }

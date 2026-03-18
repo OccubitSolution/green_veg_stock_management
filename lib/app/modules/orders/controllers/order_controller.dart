@@ -31,6 +31,7 @@ class OrderController extends GetxController {
   final RxDouble currentOrderTotal = 0.0.obs;
   final RxMap<String, double> todayPrices = <String, double>{}.obs;
   final RxString editingOrderId = ''.obs; // Track if editing existing order
+  final Rx<DeliverySlot> selectedDeliverySlot = DeliverySlot.morning.obs; // Added delivery slot
 
   // Form controllers
   final notesController = TextEditingController();
@@ -67,7 +68,10 @@ class OrderController extends GetxController {
     isLoading.value = true;
     try {
       final vendorId = _appController.vendorId.value;
-      if (vendorId.isEmpty) return;
+      if (vendorId.isEmpty) {
+        isLoading.value = false;
+        return;
+      }
 
       final orders = await _orderRepository.getOrdersByDate(
         vendorId,
@@ -376,12 +380,14 @@ class OrderController extends GetxController {
     currentOrderTotal.value = 0;
     currentOrderTotalCost.value = 0;
     editingOrderId.value = ''; // Reset editing state
+    selectedDeliverySlot.value = DeliverySlot.morning; // Reset delivery slot
   }
 
   /// Load an existing order for editing
   Future<void> loadOrderForEditing(Order order) async {
     // Store the order ID to track that we're editing
     editingOrderId.value = order.id;
+    selectedDeliverySlot.value = order.deliverySlot; // Set delivery slot
 
     // Set customer from order data
     selectedCustomer.value = Customer(
@@ -445,6 +451,7 @@ class OrderController extends GetxController {
         vendorId: vendorId,
         orderDate: selectedDate.value,
         status: OrderStatus.pending,
+        deliverySlot: selectedDeliverySlot.value, // Added delivery slot
         notes: notesController.text.trim().isEmpty
             ? null
             : notesController.text.trim(),

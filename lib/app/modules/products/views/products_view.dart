@@ -209,8 +209,8 @@ class ProductsView extends GetView<ProductsController> {
             );
           },
         ),
-      ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1),
-    );
+      ),
+    ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1);
   }
 
   IconData _getCategoryIcon(String? categoryId) {

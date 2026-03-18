@@ -61,11 +61,10 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
         title: Obx(() => Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Quick Order',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            Text(
+              'new_order'.tr,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
-            const SizedBox(width: 10),
             GestureDetector(
               onTap: () => _selectDate(context),
               child: Container(
@@ -103,7 +102,7 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
                 controller.clearCurrentOrder();
               },
               icon: const Icon(Icons.clear_all),
-              tooltip: 'Clear all',
+              tooltip: 'retry'.tr,
             );
           }),
         ],
@@ -127,7 +126,7 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
           backgroundColor: AppTheme.primaryColor,
           icon: const Icon(Icons.check),
           label: Text(
-            'Save (${controller.currentOrderItems.length} items)',
+            '${'save_order'.tr} (${controller.currentOrderItems.length})',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         );
@@ -153,7 +152,7 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
                   child: Row(
                     children: [
                       Text(
-                        'Order Date:',
+                        'purchase_date'.tr,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -219,7 +218,7 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
                   child: Row(
                     children: [
                       Text(
-                        'Select Customer',
+                        'please_select_customer'.tr,
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
@@ -261,7 +260,7 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
                   Icon(Icons.people_outline, size: 64, color: Colors.grey[300]),
                   const SizedBox(height: 12),
                   Text(
-                    'No customers found',
+                    'no_customers'.tr,
                     style: TextStyle(color: Colors.grey[500], fontSize: 15),
                   ),
                 ],
@@ -393,7 +392,7 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
               foregroundColor: AppTheme.primaryColor,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             ),
-            child: const Text('Change', style: TextStyle(fontWeight: FontWeight.w600)),
+            child: Text('edit'.tr, style: const TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -463,7 +462,7 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
       child: TextField(
         controller: controller.productSearchController,
         decoration: InputDecoration(
-          hintText: 'Search products...',
+          hintText: 'search_products'.tr,
           prefixIcon: const Icon(Icons.search),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -483,19 +482,19 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
   Widget _buildProductsList() {
     return Obx(() {
       if (controller.isLoading.value && controller.availableProducts.isEmpty) {
-        return const Center(
+        return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: AppTheme.primaryColor),
-              SizedBox(height: 16),
-              Text('Loading products...'),
+              const CircularProgressIndicator(color: AppTheme.primaryColor),
+              const SizedBox(height: 16),
+              Text('loading'.tr),
             ],
           ),
         );
       }
       
-      final searchText = controller.productSearchController.text;
+      final searchText = controller.productSearchQuery.value;
       final products = searchText.isEmpty
           ? controller.availableProducts
           : controller.filteredProducts;
@@ -513,8 +512,8 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
               const SizedBox(height: 16),
               Text(
                 searchText.isEmpty
-                    ? 'No products available'
-                    : 'No products found for "$searchText"',
+                    ? 'no_products_available'.tr
+                    : '${'no_products_found'.tr} "$searchText"',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -658,7 +657,7 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text('Add'),
+                  child: Text('add'.tr),
                 ),
             ],
           ),
@@ -689,8 +688,8 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
             children: [
               const Icon(Icons.refresh_rounded, color: Colors.white, size: 26),
               const SizedBox(height: 4),
-              const Text(
-                'Reset',
+              Text(
+                'retry'.tr,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -718,7 +717,7 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           autofocus: true,
           decoration: InputDecoration(
-            labelText: 'Quantity',
+            labelText: 'quantity'.tr,
             suffixText: product.unitSymbol,
           ),
         ),
@@ -732,7 +731,7 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
               }
               Get.back();
             },
-            child: const Text('Remove'),
+            child: Text('delete'.tr),
           ),
           ElevatedButton(
             onPressed: () {
@@ -746,7 +745,7 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
               }
               Get.back();
             },
-            child: const Text('Update'),
+            child: Text('save'.tr),
           ),
         ],
       ),
@@ -756,8 +755,8 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
   Future<void> _saveOrder() async {
     if (selectedCustomer == null) {
       Get.snackbar(
-        'Error',
-        'Please select a customer',
+        'error'.tr,
+        'please_select_customer'.tr,
         backgroundColor: Colors.red[100],
       );
       return;
@@ -765,8 +764,8 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
     
     if (controller.currentOrderItems.isEmpty) {
       Get.snackbar(
-        'Error',
-        'Please add at least one product',
+        'error'.tr,
+        'please_add_items'.tr,
         backgroundColor: Colors.red[100],
       );
       return;
@@ -782,10 +781,10 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
       Get.back();
       
       Get.snackbar(
-        'Success',
-        'Order saved successfully!',
+        'success'.tr,
+        'order_saved'.tr,
         backgroundColor: Colors.green[100],
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       );
       
       setState(() {
@@ -796,8 +795,8 @@ class _SimpleOrdersViewState extends State<SimpleOrdersView> {
     } catch (e) {
       Get.back();
       Get.snackbar(
-        'Error',
-        'Failed to save order: $e',
+        'error'.tr,
+        '${'failed_to_save_order'.tr}: $e',
         backgroundColor: Colors.red[100],
       );
     }

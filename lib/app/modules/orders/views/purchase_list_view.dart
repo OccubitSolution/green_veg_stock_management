@@ -29,7 +29,8 @@ class _PurchaseListViewState extends State<PurchaseListView> {
   Map<String, dynamic> stats = {};
   
   // Track purchased items (product ID -> isPurchased)
-  final Map<String, bool> _purchasedItems = {};
+  final Set<String> _selectedProductIds = {};
+  bool isSelectionMode = false;
 
   // Compact sizing specifications
   static const double _cardBorderRadius = 12.0; // Reduced from 16
@@ -125,6 +126,72 @@ class _PurchaseListViewState extends State<PurchaseListView> {
     return buffer.toString();
   }
 
+  String _generateSelectedShareText() {
+    final buffer = StringBuffer();
+    buffer.writeln(
+      '🥬 ${'selected_items'.tr} - ${DateFormat('dd MMM yyyy').format(selectedDate)}',
+    );
+    buffer.writeln('═' * 40);
+    buffer.writeln();
+
+    int count = 1;
+    for (final item in aggregatedItems) {
+      if (_selectedProductIds.contains(item.productId)) {
+        buffer.writeln(
+          '${count++}. ${item.getProductName(Get.locale?.languageCode ?? 'en')}',
+        );
+        buffer.writeln(
+          '   📦 ${item.totalQuantity.toStringAsFixed(1)} ${item.unitSymbol}',
+        );
+        buffer.writeln();
+      }
+    }
+
+    buffer.writeln('═' * 40);
+    buffer.writeln('${'total_selected'.tr}: ${count - 1}');
+
+    return buffer.toString();
+  }
+
+  Future<void> _togglePurchased(String productId, bool currentlyPurchased) async {
+    try {
+      final vendorId = _appController.vendorId.value;
+      await _repository.markProductAsPurchased(
+        vendorId,
+        selectedDate,
+        productId,
+        !currentlyPurchased,
+      );
+      // Reload data to reflect change
+      _loadAggregatedData();
+    } catch (e) {
+      Get.snackbar('error'.tr, 'Failed to update: $e');
+    }
+  }
+
+  Future<void> _markSelectedAsPurchased() async {
+    if (_selectedProductIds.isEmpty) return;
+    
+    setState(() => isLoading = true);
+    try {
+      final vendorId = _appController.vendorId.value;
+      for (final pid in _selectedProductIds) {
+        await _repository.markProductAsPurchased(
+          vendorId,
+          selectedDate,
+          pid,
+          true,
+        );
+      }
+      _selectedProductIds.clear();
+      isSelectionMode = false;
+      await _loadAggregatedData();
+    } catch (e) {
+      setState(() => isLoading = false);
+      Get.snackbar('error'.tr, 'Failed to update items');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -186,6 +253,19 @@ class _PurchaseListViewState extends State<PurchaseListView> {
                     icon: const Icon(Icons.refresh, color: Colors.white, size: 22),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        isSelectionMode = !isSelectionMode;
+                        if (!isSelectionMode) _selectedProductIds.clear();
+                      });
+                    },
+                    icon: Icon(
+                      isSelectionMode ? Icons.close : Icons.playlist_add_check_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
                 ],
               ),
@@ -417,117 +497,146 @@ class _PurchaseListViewState extends State<PurchaseListView> {
   }
 
   Widget _buildPurchaseItemCard(AggregatedOrderItem item, int index) {
-    final isPurchased = _purchasedItems[item.productId] ?? false;
+    final isPurchased = item.isPurchased;
+    final isSelected = _selectedProductIds.contains(item.productId);
     
     // Generate compact customer breakdown: "User1: 1kg, User2: 32kg, User3: 1.5kg"
     final breakdownText = item.itemDetails.map((d) => 
       '${d.customerName}: ${d.quantity.toStringAsFixed(d.quantity % 1 == 0 ? 0 : 1)}${item.unitSymbol}'
     ).join(', ');
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: isPurchased ? Colors.green[50] : Colors.white,
-        borderRadius: BorderRadius.circular(_cardBorderRadius),
-        border: Border.all(
-          color: isPurchased ? Colors.green[300]! : Colors.grey[200]!,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+    return GestureDetector(
+      onLongPress: () {
+        setState(() {
+          isSelectionMode = true;
+          _selectedProductIds.add(item.productId);
+        });
+      },
+      onTap: isSelectionMode ? () {
+        setState(() {
+          if (isSelected) {
+            _selectedProductIds.remove(item.productId);
+            if (_selectedProductIds.isEmpty) isSelectionMode = false;
+          } else {
+            _selectedProductIds.add(item.productId);
+          }
+        });
+      } : null,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? AppTheme.primaryColor.withValues(alpha: 0.1)
+              : isPurchased ? Colors.green[50] : Colors.white,
+          borderRadius: BorderRadius.circular(_cardBorderRadius),
+          border: Border.all(
+            color: isSelected 
+                ? AppTheme.primaryColor 
+                : isPurchased ? Colors.green[300]! : Colors.grey[200]!,
+            width: isSelected ? 1.5 : 1,
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Row(
-          children: [
-            // Compact checkbox
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  if (isPurchased) {
-                    _purchasedItems.remove(item.productId);
-                  } else {
-                    _purchasedItems[item.productId] = true;
-                  }
-                });
-              },
-              child: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: isPurchased ? Colors.green : Colors.transparent,
-                  border: Border.all(
-                    color: isPurchased ? Colors.green : Colors.grey[400]!,
-                    width: 2,
-                  ),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: isPurchased 
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
-                  : null,
-              ),
-            ),
-            const SizedBox(width: 10),
-            
-            // Product info - single column, compact
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item.getProductName(Get.locale?.languageCode ?? 'en'),
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: isPurchased ? Colors.grey[600] : AppTheme.textPrimaryLight,
-                            decoration: isPurchased ? TextDecoration.lineThrough : null,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: isPurchased 
-                            ? Colors.green.withValues(alpha: 0.15)
-                            : AppTheme.primaryColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '${item.totalQuantity.toStringAsFixed(item.totalQuantity % 1 == 0 ? 0 : 1)} ${item.unitSymbol}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: isPurchased ? Colors.green[700] : AppTheme.primaryColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    breakdownText,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isPurchased ? Colors.grey[500] : Colors.grey[600],
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            children: [
+              // Selection Checkbox (left)
+              if (isSelectionMode) ...[
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+                    border: Border.all(
+                      color: isSelected ? AppTheme.primaryColor : Colors.grey[400]!,
+                      width: 1.5,
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: isSelected 
+                    ? const Icon(Icons.check, color: Colors.white, size: 14)
+                    : null,
+                ),
+                const SizedBox(width: 12),
+              ],
+              
+              // Product info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.getProductName(Get.locale?.languageCode ?? 'en'),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: isPurchased ? Colors.grey[600] : AppTheme.textPrimaryLight,
+                              decoration: isPurchased ? TextDecoration.lineThrough : null,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: isPurchased 
+                              ? Colors.green.withValues(alpha: 0.15)
+                              : AppTheme.primaryColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${item.totalQuantity.toStringAsFixed(item.totalQuantity % 1 == 0 ? 0 : 1)} ${item.unitSymbol}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: isPurchased ? Colors.green[700] : AppTheme.primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      breakdownText,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isPurchased ? Colors.grey[500] : Colors.grey[600],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Purchased Toggle (Right)
+              if (!isSelectionMode) ...[
+                const SizedBox(width: 10),
+                IconButton(
+                  onPressed: () => _togglePurchased(item.productId, isPurchased),
+                  icon: Icon(
+                    isPurchased ? Icons.check_circle : Icons.circle_outlined,
+                    color: isPurchased ? Colors.green : Colors.grey[400],
+                    size: 26,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     ).animate(delay: (index * 30).ms).fadeIn(duration: 200.ms).slideY(begin: 0.05);
@@ -547,66 +656,99 @@ class _PurchaseListViewState extends State<PurchaseListView> {
         ],
       ),
       child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  final text = _generateShareText();
-                  Clipboard.setData(ClipboardData(text: text));
-                  Get.snackbar(
-                    'copied'.tr,
-                    'purchase_list_copied'.tr,
-                    snackPosition: SnackPosition.BOTTOM,
-                    duration: const Duration(seconds: 2),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.info,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+        child: isSelectionMode 
+          ? Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      final text = _generateSelectedShareText();
+                      Share.share(text);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryDark,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.share, size: 18),
+                    label: Text('share_selected'.tr, style: const TextStyle(fontSize: 14)),
                   ),
                 ),
-                icon: const Icon(Icons.copy, size: 18),
-                label: Text('copy'.tr, style: const TextStyle(fontSize: 14)),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 2,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  final text = _generateShareText();
-                  try {
-                    await Share.share(
-                      text,
-                      subject: 'Purchase List - ${DateFormat('dd MMM yyyy').format(selectedDate)}',
-                    );
-                  } catch (e) {
-                    Get.snackbar(
-                      'error'.tr,
-                      'Failed to share: $e',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: Colors.red[100],
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryDark,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _markSelectedAsPurchased,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[700],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.done_all, size: 18),
+                    label: Text('mark_purchased'.tr, style: const TextStyle(fontSize: 14)),
                   ),
                 ),
-                icon: const Icon(Icons.share, size: 18),
-                label: Text('share_list'.tr, style: const TextStyle(fontSize: 14)),
-              ),
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      final text = _generateShareText();
+                      Clipboard.setData(ClipboardData(text: text));
+                      Get.snackbar(
+                        'copied'.tr,
+                        'purchase_list_copied'.tr,
+                        snackPosition: SnackPosition.BOTTOM,
+                        duration: const Duration(seconds: 2),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.info,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: const Icon(Icons.copy, size: 18),
+                    label: Text('copy'.tr, style: const TextStyle(fontSize: 14)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final text = _generateShareText();
+                      try {
+                        await Share.share(
+                          text,
+                          subject: 'Purchase List - ${DateFormat('dd MMM yyyy').format(selectedDate)}',
+                        );
+                      } catch (e) {
+                        Get.snackbar(
+                          'error'.tr,
+                          'Failed to share: $e',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.red[100],
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryDark,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: const Icon(Icons.share, size: 18),
+                    label: Text('share_list'.tr, style: const TextStyle(fontSize: 14)),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
       ),
     );
   }

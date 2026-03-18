@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../routes/app_routes.dart';
+import '../../services/update_service.dart';
 
 class SplashController extends GetxController {
   final _storage = GetStorage();
@@ -19,7 +20,6 @@ class SplashController extends GetxController {
   Future<void> _navigateToNextScreen() async {
     try {
       debugPrint('⏳ Waiting for splash animation...');
-      // Wait for splash animation
       await Future.delayed(const Duration(seconds: 2));
 
       final isLoggedIn = _storage.read('is_logged_in') ?? false;
@@ -33,9 +33,11 @@ class SplashController extends GetxController {
         debugPrint('🔑 Navigating to Login...');
         Get.offAllNamed(AppRoutes.login);
       }
+
+      // Check for update after navigation (non-blocking)
+      UpdateService.checkForUpdate();
     } catch (e) {
       debugPrint('❌ Navigation error: $e');
-      // Fallback to login on any error
       Get.offAllNamed(AppRoutes.login);
     }
   }

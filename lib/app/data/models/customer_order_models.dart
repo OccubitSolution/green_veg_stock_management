@@ -142,6 +142,36 @@ enum CustomerType {
   }
 }
 
+/// Delivery Slot
+enum DeliverySlot {
+  morning('morning', 'સવાર', 'Morning', Icons.light_mode_rounded, Color(0xFFFFB74D)),
+  evening('evening', 'સાંજ', 'Evening', Icons.wb_twilight_rounded, Color(0xFFFB8C00)),
+  night('night', 'રાત', 'Night', Icons.nights_stay_rounded, Color(0xFF5C6BC0));
+
+  final String value;
+  final String nameGu;
+  final String nameEn;
+  final IconData icon;
+  final Color color;
+
+  const DeliverySlot(
+    this.value,
+    this.nameGu,
+    this.nameEn,
+    this.icon,
+    this.color,
+  );
+
+  String getName(String lang) => lang == 'en' ? nameEn : nameGu;
+
+  static DeliverySlot fromString(String value) {
+    return DeliverySlot.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => DeliverySlot.morning,
+    );
+  }
+}
+
 /// Order Model
 /// Represents a daily order placed by a customer
 class Order {
@@ -150,6 +180,7 @@ class Order {
   final String vendorId;
   final DateTime orderDate;
   final OrderStatus status;
+  final DeliverySlot deliverySlot; // Added delivery slot
   final double? totalAmount;
   final double? totalCost; // Optional: total cost price for profit tracking
   final String? notes;
@@ -181,6 +212,7 @@ class Order {
     required this.vendorId,
     required this.orderDate,
     this.status = OrderStatus.pending,
+    this.deliverySlot = DeliverySlot.morning, // Default delivery slot
     this.totalAmount,
     this.totalCost,
     this.notes,
@@ -208,6 +240,7 @@ class Order {
       vendorId: json['vendor_id'].toString(),
       orderDate: parseDateTime(json['order_date']),
       status: OrderStatus.fromString(json['status'] as String? ?? 'pending'),
+      deliverySlot: DeliverySlot.fromString(json['delivery_slot'] as String? ?? 'morning'),
       totalAmount: json['total_amount'] != null
           ? double.parse(json['total_amount'].toString())
           : null,
@@ -249,6 +282,7 @@ class Order {
       'vendor_id': vendorId,
       'order_date': orderDate.toIso8601String().split('T')[0],
       'status': status.value,
+      'delivery_slot': deliverySlot.value,
       'total_amount': totalAmount,
       'total_cost': totalCost,
       'notes': notes,
@@ -285,7 +319,8 @@ class Order {
       status != OrderStatus.delivered && status != OrderStatus.cancelled;
 
   Order copyWith({
-    OrderStatus? status, 
+    OrderStatus? status,
+    DeliverySlot? deliverySlot,
     double? totalAmount, 
     double? totalCost,
     String? notes,
@@ -305,6 +340,7 @@ class Order {
       vendorId: vendorId,
       orderDate: orderDate,
       status: status ?? this.status,
+      deliverySlot: deliverySlot ?? this.deliverySlot,
       totalAmount: totalAmount ?? this.totalAmount,
       totalCost: totalCost ?? this.totalCost,
       notes: notes ?? this.notes,
@@ -410,6 +446,7 @@ class OrderItem {
   final double? costPrice; // Optional cost price for profit tracking
   final double? totalPrice;
   final String? notes;
+  final bool isPurchased; // Added
   final DateTime createdAt;
 
   // For custom items (not from product list)
@@ -431,6 +468,7 @@ class OrderItem {
     this.costPrice,
     this.totalPrice,
     this.notes,
+    this.isPurchased = false, // Default false
     required this.createdAt,
     this.isCustomItem = false,
     this.customItemName,
@@ -456,6 +494,7 @@ class OrderItem {
           ? double.parse(json['total_price'].toString())
           : null,
       notes: json['notes'] as String?,
+      isPurchased: json['is_purchased'] as bool? ?? false,
       createdAt: parseDateTime(json['created_at']),
       isCustomItem: json['is_custom_item'] as bool? ?? false,
       customItemName: json['custom_item_name'] as String?,
@@ -475,6 +514,7 @@ class OrderItem {
       'cost_price': costPrice,
       'total_price': totalPrice,
       'notes': notes,
+      'is_purchased': isPurchased,
       'is_custom_item': isCustomItem,
       'custom_item_name': customItemName,
     };
@@ -504,6 +544,7 @@ class AggregatedOrderItem {
   final String? categoryName;
   final double totalQuantity;
   final int orderCount;
+  final bool isPurchased; // Added: derived or directly set
   final List<OrderItemDetail> itemDetails;
 
   AggregatedOrderItem({
@@ -511,9 +552,10 @@ class AggregatedOrderItem {
     required this.productNameGu,
     required this.productNameEn,
     required this.unitSymbol,
-    this.categoryName,
+     this.categoryName,
     required this.totalQuantity,
     required this.orderCount,
+    this.isPurchased = false,
     required this.itemDetails,
   });
 

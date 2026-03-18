@@ -362,13 +362,37 @@ class OrdersView extends GetView<OrderController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        order.customerName ?? 'Unknown',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimaryLight,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              order.customerName ?? 'Unknown',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textPrimaryLight,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Compact delivery slot icon in card
+                          Icon(
+                            order.deliverySlot.icon,
+                            color: order.deliverySlot.color,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            order.deliverySlot.getName(Get.locale?.languageCode ?? 'en'),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: order.deliverySlot.color,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Row(
@@ -472,6 +496,66 @@ class OrdersView extends GetView<OrderController> {
             ),
           ),
         ),
+
+        // Delivery slot selector
+        Obx(() => Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.spacingMD,
+            vertical: AppTheme.spacingXS,
+          ),
+          child: Row(
+            children: DeliverySlot.values.map((slot) {
+              final isSelected = controller.selectedDeliverySlot.value == slot;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => controller.selectedDeliverySlot.value = slot,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isSelected ? slot.color : Colors.white,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                      border: Border.all(
+                        color: isSelected 
+                            ? slot.color 
+                            : AppTheme.borderLight.withValues(alpha: 0.5),
+                        width: 1,
+                      ),
+                      boxShadow: isSelected ? [
+                        BoxShadow(
+                          color: slot.color.withValues(alpha: 0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        )
+                      ] : null,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          slot.icon,
+                          color: isSelected ? Colors.white : slot.color,
+                          size: 18,
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          slot.getName(Get.locale?.languageCode ?? 'en'),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected 
+                                ? Colors.white 
+                                : AppTheme.textSecondaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        )),
 
         // Search bar - inline, no extra container
         Container(
@@ -1525,15 +1609,15 @@ class OrdersView extends GetView<OrderController> {
                     Expanded(
                       flex: 2,
                       child: GradientButton(
-                        label: 'Add Item',
+                        label: 'add_item'.tr,
                         onPressed: () {
                           if (nameController.text.isEmpty) {
-                            Get.snackbar('Error', 'Please enter item name');
+                            Get.snackbar('error'.tr, 'field_required'.tr);
                             return;
                           }
                           final sellingPrice = double.tryParse(sellingPriceController.text);
                           if (sellingPrice == null || sellingPrice <= 0) {
-                            Get.snackbar('Error', 'Please enter valid selling price');
+                            Get.snackbar('error'.tr, 'invalid_number'.tr);
                             return;
                           }
 

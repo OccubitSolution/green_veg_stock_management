@@ -166,11 +166,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Triggers for updated_at
+DROP TRIGGER IF EXISTS update_purchases_updated_at ON purchases;
 CREATE TRIGGER update_purchases_updated_at
   BEFORE UPDATE ON purchases
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_delivery_bundles_updated_at ON delivery_bundles;
 CREATE TRIGGER update_delivery_bundles_updated_at
   BEFORE UPDATE ON delivery_bundles
   FOR EACH ROW

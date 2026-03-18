@@ -18,10 +18,12 @@ class AppTranslations extends Translations {
       'success': 'સફળ',
       'cancel': 'રદ કરો',
       'save': 'સાચવો',
+      'update': 'અપડેટ',
       'delete': 'કાઢી નાખો',
       'edit': 'સંપાદિત કરો',
       'add': 'ઉમેરો',
       'copy': 'કૉપિ',
+      'share': 'શેર',
       'search': 'શોધો',
       'filter': 'ફિલ્ટર',
       'sort': 'ક્રમ',
@@ -119,6 +121,7 @@ class AppTranslations extends Translations {
       'no_price': 'ભાવ નથી',
       'morning': 'સવારે',
       'evening': 'સાંજે',
+      'night': 'રાત્રે',
 
       // Purchases
       'purchase': 'ખરીદી',
@@ -211,6 +214,10 @@ class AppTranslations extends Translations {
       'copied': 'કૉપિ થયું!',
       'purchase_list_copied': 'ખરીદી યાદી ક્લિપબોર્ડ પર કૉપિ થઈ ગઈ',
       'share_list': 'યાદી શેર કરો',
+      'selected_items': 'પસંદ કરેલી વસ્તુઓ',
+      'total_selected': 'કુલ પસંદ કરેલ',
+      'share_selected': 'પસંદ કરેલ શેર કરો',
+      'mark_purchased': 'ખરીદેલું માર્ક કરો',
 
       // Stock
       'current_stock': 'હાલનો સ્ટોક',
@@ -362,8 +369,20 @@ class AppTranslations extends Translations {
       'failed_to_load_data': 'ડેટા લોડ કરવામાં નિષ્ફળ',
       'failed_to_pick_image': 'છબી પસંદ કરવામાં નિષ્ફળ',
 
+      // Update dialog
+      'update_available': 'અપડેટ ઉપલબ્ધ',
+      'whats_new': 'નવું શું છે',
+      'downloading': 'ડાઉનલોડ થઈ રહ્યું છે...',
+      'installing': 'ઇન્સ્ટોલ થઈ રહ્યું છે...',
+      'update_now': 'અત્યારે અપડેટ કરો',
+      'later': 'પછી',
+      'download_failed': 'ડાઉનલોડ નિષ્ફળ',
+      'install_failed': 'ઇન્સ્ટોલ નિષ્ફળ',
+      'permission_required': 'પરવાનગી જરૂરી',
+      'permission_required_msg': 'સેટિંગ્સમાં અજ્ઞાત સ્ત્રોતોમાંથી ઇન્સ્ટોલ કરવાની મંજૂરી આપો.',
+      'download_failed_msg': 'અપડેટ ડાઉનલોડ કરી શકાયો નહીં. ફરી પ્રયાસ કરો.',
+
       // Invite snackbars
-      'vendor_id_not_found': 'વેન્ડર ID મળ્યો નથી',
       'invite_code_generated': 'ઈન્વાઈટ કોડ જનરેટ થયો',
       'failed_to_generate_invite': 'ઈન્વાઈટ કોડ જનરેટ કરવામાં નિષ્ફળ',
       'generate_invite_first': 'પહેલા ઈન્વાઈટ કોડ જનરેટ કરો',
@@ -382,10 +401,12 @@ class AppTranslations extends Translations {
       'success': 'Success',
       'cancel': 'Cancel',
       'save': 'Save',
+      'update': 'Update',
       'delete': 'Delete',
       'edit': 'Edit',
       'add': 'Add',
       'copy': 'Copy',
+      'share': 'Share',
       'search': 'Search',
       'filter': 'Filter',
       'sort': 'Sort',
@@ -483,6 +504,7 @@ class AppTranslations extends Translations {
       'no_price': 'No price',
       'morning': 'Morning',
       'evening': 'Evening',
+      'night': 'Night',
 
       // Purchases
       'purchase': 'Purchase',
@@ -574,6 +596,10 @@ class AppTranslations extends Translations {
       'copied': 'Copied!',
       'purchase_list_copied': 'Purchase list copied to clipboard',
       'share_list': 'Share List',
+      'selected_items': 'Selected Items',
+      'total_selected': 'Total Selected',
+      'share_selected': 'Share Selected',
+      'mark_purchased': 'Mark Purchased',
 
       // Stock
       'current_stock': 'Current Stock',
@@ -725,8 +751,20 @@ class AppTranslations extends Translations {
       'failed_to_load_data': 'Failed to load data',
       'failed_to_pick_image': 'Failed to pick image',
 
+      // Update dialog
+      'update_available': 'Update Available',
+      'whats_new': "What's new",
+      'downloading': 'Downloading...',
+      'installing': 'Installing...',
+      'update_now': 'Update Now',
+      'later': 'Later',
+      'download_failed': 'Download Failed',
+      'install_failed': 'Install Failed',
+      'permission_required': 'Permission Required',
+      'permission_required_msg': 'Please allow installing from unknown sources in Settings.',
+      'download_failed_msg': 'Could not download update. Please try again.',
+
       // Invite snackbars
-      'vendor_id_not_found': 'Vendor ID not found',
       'invite_code_generated': 'Invite code generated',
       'failed_to_generate_invite': 'Failed to generate invite code',
       'generate_invite_first': 'Generate invite code first',

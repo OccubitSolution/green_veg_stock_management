@@ -79,6 +79,7 @@ class OrderRepository {
           'product_name_en': product['name_en'],
           'unit_symbol': unit['symbol'],
           'category_name': cat['name_en'],
+          'is_purchased': r['is_purchased'], // added
         });
       }).toList();
     } catch (e) {
@@ -93,6 +94,7 @@ class OrderRepository {
       'vendor_id': order.vendorId,
       'order_date': order.orderDate.toIso8601String().split('T')[0],
       'status': order.status.value,
+      'delivery_slot': order.deliverySlot.value,
       'notes': order.notes,
     }).select();
     final newOrder = Order.fromJson(orderRows.first as Map<String, dynamic>);
@@ -120,6 +122,7 @@ class OrderRepository {
           'customer_id': order.customerId,
           'order_date': order.orderDate.toIso8601String().split('T')[0],
           'status': order.status.value,
+          'delivery_slot': order.deliverySlot.value,
           'notes': order.notes,
           'updated_at': DateTime.now().toIso8601String(),
         })
@@ -210,12 +213,19 @@ class OrderRepository {
             'category_sort': cat['sort_order'] ?? 0,
             'total_quantity': 0.0,
             'order_count': 0,
+            'is_purchased': true, // assume purchased unless found otherwise
             'item_details': <OrderItemDetail>[],
           };
         }
         agg[pid]!['total_quantity'] =
             (agg[pid]!['total_quantity'] as double) + (item['quantity'] ?? 0);
         agg[pid]!['order_count'] = (agg[pid]!['order_count'] as int) + 1;
+        
+        // If even one item isn't purchased, the aggregator marks it as not fully purchased
+        if (!(item['is_purchased'] as bool? ?? false)) {
+          agg[pid]!['is_purchased'] = false;
+        }
+
         (agg[pid]!['item_details'] as List<OrderItemDetail>).add(
           OrderItemDetail(
             orderId: item['order_id']?.toString() ?? '',
@@ -235,6 +245,7 @@ class OrderRepository {
           categoryName: json['category_name'],
           totalQuantity: json['total_quantity'],
           orderCount: json['order_count'],
+          isPurchased: json['is_purchased'],
           itemDetails: json['item_details'],
         );
       }).toList();
@@ -305,5 +316,33 @@ class OrderRepository {
       'customer_name': customer['name'],
       'customer_type': customer['type'],
     };
+  }
+
+  /// Bulk mark a product as purchased for a date
+  Future<void> markProductAsPurchased(
+    String vendorId,
+    DateTime date,
+    String productId,
+    bool purchased,
+  ) async {
+    final dateStr = date.toIso8601String().split('T')[0];
+    
+    // 1. Find all order IDs for this vendor and date
+    final orders = await _client
+        .from('orders')
+        .select('id')
+        .eq('vendor_id', vendorId)
+        .eq('order_date', dateStr)
+        .neq('status', 'cancelled');
+        
+    final orderIds = (orders as List).map((o) => o['id']).toList();
+    if (orderIds.isEmpty) return;
+
+    // 2. Update order_items with this product ID in those orders
+    await _client
+        .from('order_items')
+        .update({'is_purchased': purchased})
+        .inFilter('order_id', orderIds)
+        .eq('product_id', productId);
   }
 }
