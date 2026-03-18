@@ -19,7 +19,7 @@ class CustomerRepository {
 
       final rows = await q;
       final customers = rows
-          .map((r) => Customer.fromJson(r as Map<String, dynamic>))
+          .map((r) => Customer.fromJson(r))
           .toList();
       customers.sort(
         (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
@@ -39,7 +39,7 @@ class CustomerRepository {
           .eq('id', id)
           .limit(1);
       if (rows.isEmpty) return null;
-      return Customer.fromJson(rows.first as Map<String, dynamic>);
+      return Customer.fromJson(rows.first);
     } catch (e) {
       debugPrint('❌ getCustomerById failed: $e');
       return null;
@@ -93,7 +93,7 @@ class CustomerRepository {
 
       final s = query.toLowerCase();
       final all = rows
-          .map((r) => Customer.fromJson(r as Map<String, dynamic>))
+          .map((r) => Customer.fromJson(r))
           .toList();
       final filtered = all
           .where(

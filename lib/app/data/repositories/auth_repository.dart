@@ -52,7 +52,7 @@ class AuthRepository {
           .eq('is_active', true)
           .limit(1);
       if (rows.isEmpty) return null;
-      return Vendor.fromJson(rows.first as Map<String, dynamic>);
+      return Vendor.fromJson(rows.first);
     } catch (e) {
       debugPrint('❌ Login failed: $e');
       rethrow;
@@ -110,7 +110,7 @@ class AuthRepository {
           .eq('id', vendorId)
           .limit(1);
       if (rows.isEmpty) return null;
-      return Vendor.fromJson(rows.first as Map<String, dynamic>);
+      return Vendor.fromJson(rows.first);
     } catch (e) {
       debugPrint('❌ Get vendor failed: $e');
       return null;
@@ -164,7 +164,7 @@ class AuthRepository {
           .eq('is_active', true)
           .limit(1);
       if (rows.isEmpty) return null;
-      return Vendor.fromJson(rows.first as Map<String, dynamic>);
+      return Vendor.fromJson(rows.first);
     } catch (e) {
       debugPrint('❌ Get vendor by invite code failed: $e');
       return null;

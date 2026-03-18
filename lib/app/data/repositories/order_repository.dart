@@ -18,7 +18,7 @@ class OrderRepository {
           .eq('order_date', dateStr)
           .order('order_date');
       return rows
-          .map((r) => Order.fromJson(_flattenOrder(r as Map<String, dynamic>)))
+          .map((r) => Order.fromJson(_flattenOrder(r)))
           .toList();
     } catch (e) {
       debugPrint('❌ getOrdersByDate failed: $e');
@@ -38,7 +38,7 @@ class OrderRepository {
           .order('order_date', ascending: false)
           .limit(limit);
       return rows
-          .map((r) => Order.fromJson(_flattenOrder(r as Map<String, dynamic>)))
+          .map((r) => Order.fromJson(_flattenOrder(r)))
           .toList();
     } catch (e) {
       debugPrint('❌ getOrdersByCustomer failed: $e');
@@ -54,7 +54,7 @@ class OrderRepository {
           .eq('id', orderId)
           .limit(1);
       if (rows.isEmpty) return null;
-      return Order.fromJson(_flattenOrder(rows.first as Map<String, dynamic>));
+      return Order.fromJson(_flattenOrder(rows.first));
     } catch (e) {
       debugPrint('❌ getOrderById failed: $e');
       return null;
@@ -97,7 +97,7 @@ class OrderRepository {
       'delivery_slot': order.deliverySlot.value,
       'notes': order.notes,
     }).select();
-    final newOrder = Order.fromJson(orderRows.first as Map<String, dynamic>);
+    final newOrder = Order.fromJson(orderRows.first);
 
     for (final item in items) {
       await _client.from('order_items').insert({
@@ -129,9 +129,7 @@ class OrderRepository {
         .eq('id', orderId)
         .select();
     if (orderRows.isEmpty) throw Exception('Order not found');
-    final updatedOrder = Order.fromJson(
-      orderRows.first as Map<String, dynamic>,
-    );
+    final updatedOrder = Order.fromJson(orderRows.first);
 
     // Replace items
     await _client.from('order_items').delete().eq('order_id', orderId);
@@ -254,7 +252,7 @@ class OrderRepository {
         final catA = agg[a.productId]!['category_sort'] as int;
         final catB = agg[b.productId]!['category_sort'] as int;
         if (catA != catB) return catA.compareTo(catB);
-        return (a.productNameEn ?? '').compareTo(b.productNameEn ?? '');
+        return (a.productNameEn).compareTo(b.productNameEn);
       });
       return result;
     } catch (e) {

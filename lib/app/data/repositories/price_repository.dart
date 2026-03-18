@@ -161,7 +161,7 @@ class PriceRepository {
         'notes': notes,
       }, onConflict: 'product_id,price_date').select();
       if (rows.isEmpty) return null;
-      return DailyPrice.fromJson(rows.first as Map<String, dynamic>);
+      return DailyPrice.fromJson(rows.first);
     } catch (e) {
       debugPrint('❌ setPrice failed: $e');
       rethrow;

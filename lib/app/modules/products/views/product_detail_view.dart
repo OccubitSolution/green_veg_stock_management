@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/common_widgets.dart';
-import '../../../data/models/product_model.dart';
 import '../controllers/products_controller.dart';
 
 class ProductDetailView extends GetView<ProductsController> {

@@ -67,7 +67,7 @@ class InventoryRepository {
           .order('created_at', ascending: false)
           .limit(limit);
       return rows
-          .map((r) => StockMovement.fromJson(r as Map<String, dynamic>))
+          .map((r) => StockMovement.fromJson(r))
           .toList();
     } catch (e) {
       debugPrint('❌ getStockMovements failed: $e');

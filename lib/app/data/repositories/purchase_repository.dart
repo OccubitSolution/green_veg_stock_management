@@ -30,7 +30,7 @@ class PurchaseRepository {
           .order('purchase_date', ascending: false)
           .limit(limit);
       return rows
-          .map((r) => Purchase.fromJson(r as Map<String, dynamic>))
+          .map((r) => Purchase.fromJson(r))
           .toList();
     } catch (e) {
       debugPrint('❌ getPurchases failed: $e');
@@ -47,7 +47,7 @@ class PurchaseRepository {
           .eq('id', purchaseId)
           .limit(1);
       if (rows.isEmpty) return null;
-      return Purchase.fromJson(rows.first as Map<String, dynamic>);
+      return Purchase.fromJson(rows.first);
     } catch (e) {
       debugPrint('❌ getPurchaseById failed: $e');
       return null;
@@ -62,7 +62,7 @@ class PurchaseRepository {
           .select('*, products(name_gu, name_en, units(symbol))')
           .eq('purchase_id', purchaseId);
       return rows.map((r) {
-        final flat = _flattenItem(r as Map<String, dynamic>);
+        final flat = _flattenItem(r);
         return PurchaseItem.fromJson(flat);
       }).toList();
     } catch (e) {
@@ -85,9 +85,7 @@ class PurchaseRepository {
       'notes': purchase.notes,
     }).select();
 
-    final newPurchase = Purchase.fromJson(
-      purchaseRows.first as Map<String, dynamic>,
-    );
+    final newPurchase = Purchase.fromJson(purchaseRows.first);
 
     // Insert items
     for (final item in items) {

@@ -1,8 +1,6 @@
 /// String Extensions - Easy translation access
 library;
 
-import 'package:get/get.dart';
-
 /// Extension to make translations easier
 /// Usage: AppStrings.productName.tr instead of 'product_name'.tr
 extension StringTranslation on String {

@@ -69,7 +69,7 @@ class ProductRepository {
           .eq('id', productId)
           .limit(1);
       if ((rows).isEmpty) return null;
-      final r = rows.first as Map<String, dynamic>;
+      final r = rows.first;
       final cat = r['categories'] as Map<String, dynamic>? ?? {};
       final unit = r['units'] as Map<String, dynamic>? ?? {};
       return Product.fromJson({
@@ -125,7 +125,7 @@ class ProductRepository {
     try {
       final rows = await _client.from('units').select().order('name_gu');
       return rows
-          .map((r) => ProductUnit.fromJson(r as Map<String, dynamic>))
+          .map((r) => ProductUnit.fromJson(r))
           .toList();
     } catch (e) {
       debugPrint('❌ getUnits failed: $e');
@@ -145,7 +145,7 @@ class ProductRepository {
           .eq('is_active', true)
           .order('sort_order');
       return rows
-          .map((r) => Category.fromJson(r as Map<String, dynamic>))
+          .map((r) => Category.fromJson(r))
           .toList();
     } catch (e) {
       debugPrint('❌ getCategories failed: $e');

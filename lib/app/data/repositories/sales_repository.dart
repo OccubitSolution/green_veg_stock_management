@@ -34,7 +34,7 @@ class SalesRepository {
 
       final rows = await q.order('sale_date', ascending: false).limit(limit);
       return rows
-          .map((r) => Sale.fromJson(_flattenSale(r as Map<String, dynamic>)))
+          .map((r) => Sale.fromJson(_flattenSale(r)))
           .toList();
     } catch (e) {
       debugPrint('❌ getSales failed: $e');
@@ -50,7 +50,7 @@ class SalesRepository {
           .eq('id', saleId)
           .limit(1);
       if (rows.isEmpty) return null;
-      return Sale.fromJson(_flattenSale(rows.first as Map<String, dynamic>));
+      return Sale.fromJson(_flattenSale(rows.first));
     } catch (e) {
       debugPrint('❌ getSaleById failed: $e');
       return null;
@@ -64,7 +64,7 @@ class SalesRepository {
           .select('*, products(name_gu, name_en, units(symbol))')
           .eq('sale_id', saleId);
       return rows.map((r) {
-        final flat = _flattenItem(r as Map<String, dynamic>);
+        final flat = _flattenItem(r);
         return SaleItem.fromJson(flat);
       }).toList();
     } catch (e) {
@@ -101,7 +101,7 @@ class SalesRepository {
       'status': 'pending',
       'delivery_notes': deliveryNotes,
     }).select();
-    final newSale = Sale.fromJson(saleRows.first as Map<String, dynamic>);
+    final newSale = Sale.fromJson(saleRows.first);
 
     // Insert sale items & deduct stock
     for (final item in items) {
@@ -239,7 +239,7 @@ class SalesRepository {
           .eq('status', 'pending')
           .order('sale_date');
       return rows
-          .map((r) => Sale.fromJson(_flattenSale(r as Map<String, dynamic>)))
+          .map((r) => Sale.fromJson(_flattenSale(r)))
           .toList();
     } catch (e) {
       debugPrint('❌ getPendingDeliveries failed: $e');
