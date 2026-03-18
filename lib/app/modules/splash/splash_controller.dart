@@ -4,17 +4,24 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../routes/app_routes.dart';
 import '../../services/update_service.dart';
 
 class SplashController extends GetxController {
   final _storage = GetStorage();
+  final RxString appVersion = '...'.obs;
 
   @override
   void onInit() {
     super.onInit();
-    debugPrint('🚀 SplashController initialized');
+    _loadVersion();
     _navigateToNextScreen();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    appVersion.value = info.version;
   }
 
   Future<void> _navigateToNextScreen() async {

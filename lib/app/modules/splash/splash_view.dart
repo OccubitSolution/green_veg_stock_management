@@ -116,14 +116,14 @@ class SplashView extends GetView<SplashController> {
               bottom: 40,
               left: 0,
               right: 0,
-              child: Text(
-                'v1.0.3',
+              child: Obx(() => Text(
+                'v${controller.appVersion.value}',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.5),
                   fontSize: 12,
                 ),
-              ).animate().fadeIn(delay: 800.ms),
+              )).animate().fadeIn(delay: 800.ms),
             ),
           ],
         ),
