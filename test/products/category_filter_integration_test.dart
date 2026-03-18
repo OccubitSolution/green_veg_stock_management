@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
-import '../controllers/products_controller.dart';
-import '../../../data/models/product_model.dart';
-import '../../../data/models/models.dart';
-import '../../../widgets/common_widgets.dart';
-import '../../../theme/app_theme.dart';
+import 'package:green_veg_stock_management/app/data/models/product_model.dart';
+import 'package:green_veg_stock_management/app/data/models/models.dart';
+import 'package:green_veg_stock_management/app/widgets/common_widgets.dart';
 
 // ============================================================================
 // MOCK REPOSITORY FOR TESTING
