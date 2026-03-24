@@ -595,7 +595,7 @@ class CustomersView extends GetView<CustomerController> {
                           final success = await controller.saveCustomer(
                             customerId: customer?.id,
                           );
-                          if (success) Get.back();
+                          if (success) Navigator.of(context).pop();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryColor,

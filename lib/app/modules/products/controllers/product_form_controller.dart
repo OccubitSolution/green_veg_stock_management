@@ -142,13 +142,14 @@ class ProductFormController extends GetxController {
         'image_url': null,
       };
 
+      final String successMessage;
       if (editingProduct != null) {
         // Update existing product
         await _productRepository.updateProduct(
           editingProduct!.id,
           productData,
         );
-        Get.snackbar(AppStrings.success.tr, AppStrings.productUpdatedSuccessfully.tr);
+        successMessage = AppStrings.productUpdatedSuccessfully.tr;
       } else {
         // Create new product
         final product = Product(
@@ -167,10 +168,15 @@ class ProductFormController extends GetxController {
         if (createdProduct == null) {
           throw Exception('Failed to create product: database returned null');
         }
-        Get.snackbar(AppStrings.success.tr, AppStrings.productAddedSuccessfully.tr);
+        successMessage = AppStrings.productAddedSuccessfully.tr;
       }
 
+      // Navigate back FIRST, then show snackbar.
+      // If snackbar is shown before Get.back(), GetX treats the snackbar
+      // overlay as the top route and Get.back() dismisses it instead of
+      // the page — leaving the form open and allowing duplicate submissions.
       Get.back(result: true);
+      Get.snackbar(AppStrings.success.tr, successMessage);
     } catch (e) {
       debugPrint('❌ Save product failed: $e');
       Get.snackbar(AppStrings.error.tr, AppStrings.failedToSaveProduct.tr);

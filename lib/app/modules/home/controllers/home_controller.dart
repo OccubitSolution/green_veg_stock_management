@@ -11,6 +11,7 @@ import '../../../data/repositories/purchase_repository.dart';
 import '../../../data/repositories/inventory_repository.dart';
 import '../../../data/repositories/sales_repository.dart';
 import '../../../data/repositories/order_repository.dart';
+import '../../../data/repositories/customer_repository.dart';
 import '../../../data/providers/database_provider.dart';
 import '../../../theme/app_theme.dart';
 
@@ -24,6 +25,7 @@ class HomeController extends GetxController {
   final InventoryRepository _inventoryRepository = InventoryRepository();
   final SalesRepository _salesRepository = SalesRepository();
   final OrderRepository _orderRepository = OrderRepository();
+  final CustomerRepository _customerRepository = CustomerRepository();
   final _storage = GetStorage();
 
   // Observable States
@@ -31,6 +33,7 @@ class HomeController extends GetxController {
   final todayDate = ''.obs;
   final productCount = '0'.obs;
   final categoryCount = '0'.obs;
+  final totalRegisteredCustomers = '0'.obs;
   final pricesSetCount = '0'.obs;
 
   // Phase 2 Stats
@@ -128,9 +131,14 @@ class HomeController extends GetxController {
       try {
         final prices = await _priceRepository.getTodayPrices(vendorId);
         pricesSetCount.value = prices.length.toString();
+        
+        // Fetch total registered customers
+        final customerList = await _customerRepository.getCustomers(vendorId);
+        totalRegisteredCustomers.value = customerList.length.toString();
       } catch (e) {
-        debugPrint('⚠️ Prices error: $e');
+        debugPrint('⚠️ Dashboard aux data error: $e');
         pricesSetCount.value = '0';
+        totalRegisteredCustomers.value = '0';
       }
 
       // Build recent activities from actual data
@@ -263,20 +271,35 @@ class HomeController extends GetxController {
       last7DaysRevenue.value = revenueData;
       last7DaysLabels.value = labelData;
 
-      // 3. Top Products (simplified - using products count for now)
-      final products = await _productRepository.getProducts(vendorId);
-      final topProductsData = <Map<String, dynamic>>[];
+      // 3. Top Products (Phase 2 enhancement with real sales data)
+      try {
+        final topSellingData = await DatabaseProvider.instance.getTopSellingProducts(vendorId, limit: 5);
+        final topProductsData = <Map<String, dynamic>>[];
 
-      // Take top 5 products as placeholder (can be enhanced later with actual sales data)
-      for (int i = 0; i < (products.length > 5 ? 5 : products.length); i++) {
-        topProductsData.add({
-          'id': products[i].id,
-          // ignore: dead_null_aware_expression
-          'name': products[i].nameEn ?? products[i].nameGu,
-          'count': 10 - i,
-        });
+        for (final item in topSellingData) {
+          topProductsData.add({
+            'id': item['product_id'],
+            'name': item['product_name_en'] ?? item['product_name_gu'] ?? 'Unknown',
+            'count': (item['total_quantity'] ?? 0.0).toDouble(),
+          });
+        }
+        
+        // If no sales data, show top items from catalog as placeholder but with 0 count
+        if (topProductsData.isEmpty) {
+          final products = await _productRepository.getProducts(vendorId);
+          for (int i = 0; i < (products.length > 5 ? 5 : products.length); i++) {
+            topProductsData.add({
+              'id': products[i].id,
+              'name': products[i].nameEn ?? products[i].nameGu,
+              'count': 0.0,
+            });
+          }
+        }
+        topProducts.value = topProductsData;
+      } catch (e) {
+        debugPrint('⚠️ Top products error: $e');
+        topProducts.value = [];
       }
-      topProducts.value = topProductsData;
 
       // 4. Generate Smart Alerts
       final alerts = <Map<String, dynamic>>[];

@@ -202,9 +202,9 @@ class HomeView extends GetView<HomeController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Quick Actions',
-          style: TextStyle(
+        Text(
+          'quick_actions'.tr,
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: AppTheme.textPrimaryLight,
@@ -219,7 +219,7 @@ class HomeView extends GetView<HomeController> {
               Expanded(
                 child: _buildActionButton(
                   context,
-                  'Clients',
+                  'clients'.tr,
                   Icons.people_outline,
                   AppTheme.primaryColor,
                   () => Get.toNamed(AppRoutes.customers),
@@ -229,7 +229,7 @@ class HomeView extends GetView<HomeController> {
               Expanded(
                 child: _buildActionButton(
                   context,
-                  'Purchase List',
+                  'purchase_list'.tr,
                   Icons.shopping_cart_outlined,
                   AppTheme.vegLeafy,
                   () => Get.toNamed(AppRoutes.purchaseList),
@@ -244,7 +244,7 @@ class HomeView extends GetView<HomeController> {
               Expanded(
                 child: _buildActionButton(
                   context,
-                  'Create Bill',
+                  'create_bill'.tr,
                   Icons.receipt_long_rounded,
                   AppTheme.primaryColor,
                   () async {
@@ -267,9 +267,9 @@ class HomeView extends GetView<HomeController> {
               Expanded(
                 child: _buildActionButton(
                   context,
-                  'Orders List',
+                  'orders_list'.tr,
                   Icons.list_alt_rounded,
-                  AppTheme.accentColor,
+                  const Color(0xFF5C6BC0),
                   () => Get.toNamed(AppRoutes.orders),
                 ),
               ),
@@ -281,9 +281,9 @@ class HomeView extends GetView<HomeController> {
               Expanded(
                 child: _buildActionButton(
                   context,
-                  'Add Product',
+                  'add_product'.tr,
                   Icons.add_box_outlined,
-                  AppTheme.textSecondaryLight,
+                  const Color(0xFF66BB6A),
                   () => Get.toNamed(AppRoutes.addProduct),
                 ),
               ),
@@ -291,9 +291,9 @@ class HomeView extends GetView<HomeController> {
               Expanded(
                 child: _buildActionButton(
                   context,
-                  'Clients',
+                  'clients'.tr,
                   Icons.people_outline,
-                  AppTheme.accentColor,
+                  const Color(0xFFFB8C00),
                   () => Get.toNamed(AppRoutes.customers),
                 ),
               ),
@@ -305,13 +305,14 @@ class HomeView extends GetView<HomeController> {
               Expanded(
                 child: _buildActionButton(
                   context,
-                  'Purchase List',
+                  'purchase_list'.tr,
                   Icons.shopping_cart_outlined,
-                  AppTheme.vegLeafy,
+                  const Color(0xFF26A69A),
                   () => Get.toNamed(AppRoutes.purchaseList),
                 ),
               ),
-              // Empty expanded to balance the row if needed, or just let it be full width. Let's make it full width.
+              const SizedBox(width: AppTheme.spacingSM),
+              const Expanded(child: SizedBox()),
             ],
           ),
         ],
@@ -422,7 +423,7 @@ class HomeView extends GetView<HomeController> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Today's Revenue",
+                  "today_revenue".tr,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.9),
                     fontSize: 14,
@@ -485,12 +486,12 @@ class HomeView extends GetView<HomeController> {
             Row(
               children: [
                 _buildMetricPill(
-                  '${controller.totalOrders.value} Orders',
+                  '${controller.totalOrders.value} ${'orders'.tr}',
                   Icons.receipt,
                 ),
                 const SizedBox(width: AppTheme.spacingSM),
                 _buildMetricPill(
-                  '${controller.totalCustomers.value} Customers',
+                  '${controller.totalRegisteredCustomers.value} ${'customers'.tr}',
                   Icons.people,
                 ),
               ],
@@ -536,9 +537,9 @@ class HomeView extends GetView<HomeController> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Smart Insights',
-            style: TextStyle(
+          Text(
+            'smart_insights'.tr,
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppTheme.textPrimaryLight,
@@ -661,9 +662,9 @@ class HomeView extends GetView<HomeController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Revenue Trend (7 Days)',
-              style: TextStyle(
+            Text(
+              'revenue_trend_7_days'.tr,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textPrimaryLight,
@@ -675,7 +676,7 @@ class HomeView extends GetView<HomeController> {
               child: controller.last7DaysRevenue.isEmpty
                   ? Center(
                       child: Text(
-                        'No data available',
+                        'no_data_available'.tr,
                         style: TextStyle(
                           color: AppTheme.textTertiaryLight,
                           fontSize: 14,
@@ -787,9 +788,9 @@ class HomeView extends GetView<HomeController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Top Products',
-              style: TextStyle(
+            Text(
+              'top_products'.tr,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textPrimaryLight,
@@ -801,7 +802,7 @@ class HomeView extends GetView<HomeController> {
                     child: Padding(
                       padding: const EdgeInsets.all(AppTheme.spacingXL),
                       child: Text(
-                        'No products data',
+                        'no_products_data'.tr,
                         style: TextStyle(
                           color: AppTheme.textTertiaryLight,
                           fontSize: 14,
@@ -825,7 +826,7 @@ class HomeView extends GetView<HomeController> {
   }
 
   Widget _buildProductBar(Map<String, dynamic> product, int index) {
-    final count = product['count'] as int;
+    final count = (product['count'] as num).toDouble();
     final name = product['name'] as String;
     final colors = [
       const Color(0xFFE57373),
@@ -838,7 +839,7 @@ class HomeView extends GetView<HomeController> {
     final maxValue = controller.topProducts.isEmpty
         ? 10.0
         : controller.topProducts
-              .map((p) => p['count'] as int)
+              .map((p) => (p['count'] as num).toDouble())
               .reduce((a, b) => a > b ? a : b)
               .toDouble();
     final percentage = (count / maxValue) * 100;
@@ -885,7 +886,7 @@ class HomeView extends GetView<HomeController> {
                             ),
                             child: Center(
                               child: Text(
-                                '$count orders',
+                                '${count.toStringAsFixed(1)} ${'units'.tr}',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 11,
@@ -907,53 +908,55 @@ class HomeView extends GetView<HomeController> {
 
   /// Quick Stats (Condensed)
   Widget _buildQuickStats(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Quick Stats',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textPrimaryLight,
+    return Obx(
+      () => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'quick_stats'.tr,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimaryLight,
+            ),
           ),
-        ),
-        const SizedBox(height: AppTheme.spacingSM),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppTheme.spacingSM,
-          crossAxisSpacing: AppTheme.spacingSM,
-          childAspectRatio: 2,
-          children: [
-            _buildQuickStatCard(
-              'Low Stock',
-              controller.lowStockCount.value,
-              Icons.inventory_2_outlined,
-              AppTheme.warning,
-            ),
-            _buildQuickStatCard(
-              'Out of Stock',
-              controller.outOfStockCount.value,
-              Icons.remove_shopping_cart_outlined,
-              AppTheme.error,
-            ),
-            _buildQuickStatCard(
-              'Products',
-              controller.productCount.value,
-              Icons.eco,
-              AppTheme.primaryColor,
-            ),
-            _buildQuickStatCard(
-              'Prices Set',
-              controller.pricesSetCount.value,
-              Icons.price_change,
-              AppTheme.success,
-            ),
-          ],
-        ),
-      ],
+          const SizedBox(height: AppTheme.spacingSM),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: AppTheme.spacingSM,
+            crossAxisSpacing: AppTheme.spacingSM,
+            childAspectRatio: 2,
+            children: [
+              _buildQuickStatCard(
+                'low_stock'.tr,
+                controller.lowStockCount.value,
+                Icons.inventory_2_outlined,
+                AppTheme.warning,
+              ),
+              _buildQuickStatCard(
+                'out_of_stock'.tr,
+                controller.outOfStockCount.value,
+                Icons.remove_shopping_cart_outlined,
+                AppTheme.error,
+              ),
+              _buildQuickStatCard(
+                'products'.tr,
+                controller.productCount.value,
+                Icons.eco,
+                AppTheme.primaryColor,
+              ),
+              _buildQuickStatCard(
+                'prices_set'.tr,
+                controller.pricesSetCount.value,
+                Icons.price_change,
+                AppTheme.success,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

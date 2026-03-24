@@ -272,6 +272,49 @@ class DatabaseProvider {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getTopSellingProducts(
+    String vendorId, {
+    int limit = 5,
+  }) async {
+    try {
+      // Query order items joined with product names
+      // We filter by vendor_id through the orders table using inner join syntax in select
+      final rows = await client
+          .from('order_items')
+          .select('product_id, quantity, product_name_en, product_name_gu, orders!inner(vendor_id)')
+          .eq('orders.vendor_id', vendorId);
+
+      // Manual aggregation since Supabase client grouping is limited in some versions
+      final Map<String, Map<String, dynamic>> aggregated = {};
+      for (final row in rows) {
+        final productId = row['product_id']?.toString() ?? 'custom';
+        final qty = (row['quantity'] ?? 0.0).toDouble();
+        final nameEn = row['product_name_en'] as String?;
+        final nameGu = row['product_name_gu'] as String?;
+
+        if (aggregated.containsKey(productId)) {
+          aggregated[productId]!['total_quantity'] += qty;
+        } else {
+          aggregated[productId] = {
+            'product_id': productId,
+            'total_quantity': qty,
+            'product_name_en': nameEn,
+            'product_name_gu': nameGu,
+          };
+        }
+      }
+
+      final resultList = aggregated.values.toList();
+      resultList.sort((a, b) => (b['total_quantity'] as double)
+          .compareTo(a['total_quantity'] as double));
+
+      return resultList.take(limit).toList();
+    } catch (e) {
+      debugPrint('❌ getTopSellingProducts failed: $e');
+      return [];
+    }
+  }
+
   Future<void> clearVendorCache(String vendorId) async {
     debugPrint('🗑️ Clearing cache for vendor: $vendorId');
   }
