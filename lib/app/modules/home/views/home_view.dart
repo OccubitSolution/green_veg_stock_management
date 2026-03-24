@@ -7,6 +7,7 @@ import '../../../controllers/app_controller.dart';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/common_widgets.dart';
 import '../../../routes/app_routes.dart';
+import '../../orders/controllers/order_controller.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -246,7 +247,19 @@ class HomeView extends GetView<HomeController> {
                   'Create Bill',
                   Icons.receipt_long_rounded,
                   AppTheme.primaryColor,
-                  () => Get.toNamed(AppRoutes.addOrder),
+                  () async {
+                    final customer = await Get.toNamed(
+                      AppRoutes.customers,
+                      arguments: {'isSelectionMode': true},
+                    );
+                    if (customer != null) {
+                      if (!Get.isRegistered<OrderController>()) {
+                        Get.put(OrderController());
+                      }
+                      Get.find<OrderController>().selectCustomer(customer);
+                      Get.toNamed(AppRoutes.orders);
+                    }
+                  },
                   isPrimary: true,
                 ),
               ),
@@ -254,10 +267,10 @@ class HomeView extends GetView<HomeController> {
               Expanded(
                 child: _buildActionButton(
                   context,
-                  'Add Product',
-                  Icons.add_box_outlined,
-                  AppTheme.textSecondaryLight,
-                  () => Get.toNamed(AppRoutes.addProduct),
+                  'Orders List',
+                  Icons.list_alt_rounded,
+                  AppTheme.accentColor,
+                  () => Get.toNamed(AppRoutes.orders),
                 ),
               ),
             ],
@@ -268,13 +281,27 @@ class HomeView extends GetView<HomeController> {
               Expanded(
                 child: _buildActionButton(
                   context,
+                  'Add Product',
+                  Icons.add_box_outlined,
+                  AppTheme.textSecondaryLight,
+                  () => Get.toNamed(AppRoutes.addProduct),
+                ),
+              ),
+              const SizedBox(width: AppTheme.spacingSM),
+              Expanded(
+                child: _buildActionButton(
+                  context,
                   'Clients',
                   Icons.people_outline,
                   AppTheme.accentColor,
                   () => Get.toNamed(AppRoutes.customers),
                 ),
               ),
-              const SizedBox(width: AppTheme.spacingSM),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spacingSM),
+          Row(
+            children: [
               Expanded(
                 child: _buildActionButton(
                   context,
@@ -284,6 +311,7 @@ class HomeView extends GetView<HomeController> {
                   () => Get.toNamed(AppRoutes.purchaseList),
                 ),
               ),
+              // Empty expanded to balance the row if needed, or just let it be full width. Let's make it full width.
             ],
           ),
         ],

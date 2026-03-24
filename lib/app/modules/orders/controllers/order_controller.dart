@@ -80,10 +80,12 @@ class OrderController extends GetxController {
       todayOrders.value = orders;
       filterOrders(orderSearchQuery.value); // Apply current filter
     } catch (e) {
+      debugPrint('❌ loadTodayOrders error: $e');
       Get.snackbar(
         'error'.tr,
-        'failed_to_load_orders'.tr,
+        'Error loading orders: $e',
         snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 5),
       );
     } finally {
       isLoading.value = false;

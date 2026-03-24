@@ -89,7 +89,8 @@ class HomeController extends GetxController {
     try {
       final vendorId = _storage.read('vendor_id');
       if (vendorId == null || vendorId.toString().isEmpty) {
-        Get.snackbar('Error', 'Vendor ID not found');
+        debugPrint('⚠️ fetchDashboardData: vendorId is empty');
+        isLoading.value = false; // ← FIX: don't leave the spinner stuck
         return;
       }
 

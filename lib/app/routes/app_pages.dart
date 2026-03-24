@@ -45,7 +45,6 @@ import '../modules/customers/bindings/customer_binding.dart';
 
 // Orders
 import '../modules/orders/views/orders_view.dart';
-import '../modules/orders/views/simple_orders_view.dart';
 import '../modules/orders/views/purchase_list_view.dart';
 import '../modules/orders/bindings/order_binding.dart';
 
@@ -148,26 +147,10 @@ class AppPages {
       transition: Transition.rightToLeft,
     ),
 
-    // Add Order (Direct bill creation - bypasses bill list)
-    GetPage(
-      name: AppRoutes.addOrder,
-      page: () => const SimpleOrdersView(),
-      binding: OrderBinding(),
-      transition: Transition.rightToLeft,
-    ),
-
     // Sales (kept for backward compatibility)
     GetPage(
       name: AppRoutes.sales,
       page: () => const OrdersView(),
-      binding: OrderBinding(),
-      transition: Transition.rightToLeft,
-    ),
-
-    // Simple Order Creation
-    GetPage(
-      name: AppRoutes.simpleOrder,
-      page: () => const SimpleOrdersView(),
       binding: OrderBinding(),
       transition: Transition.rightToLeft,
     ),

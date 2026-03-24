@@ -9,6 +9,7 @@ import '../../reports/views/reports_view.dart';
 import '../../../widgets/navigation_widgets.dart';
 import '../../../theme/app_theme.dart';
 import '../../../routes/app_routes.dart';
+import '../../orders/controllers/order_controller.dart';
 
 class DashboardView extends GetView<DashboardController> {
   const DashboardView({super.key});
@@ -43,7 +44,19 @@ class DashboardView extends GetView<DashboardController> {
             FloatingNavBarWithFab(
               currentIndex: controller.currentIndex.value,
               onTap: controller.changePage,
-              onFabPressed: () => Get.toNamed(AppRoutes.simpleOrder),
+              onFabPressed: () async {
+                final customer = await Get.toNamed(
+                  AppRoutes.customers,
+                  arguments: {'isSelectionMode': true},
+                );
+                if (customer != null) {
+                  if (!Get.isRegistered<OrderController>()) {
+                    Get.put(OrderController());
+                  }
+                  Get.find<OrderController>().selectCustomer(customer);
+                  Get.toNamed(AppRoutes.orders);
+                }
+              },
               fabIcon: Icons.receipt_long_rounded,
               fabLabel: 'new_order'.tr,
               items: const [
